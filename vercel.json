@@ -1,0 +1,5 @@
+{
+  "installCommand": "pnpm install --shamefully-hoist",
+  "buildCommand": "pnpm run build",
+  "outputDirectory": "dist"
+}

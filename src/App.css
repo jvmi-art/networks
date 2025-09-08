@@ -1,0 +1,7 @@
+/** @format */
+
+/* Ensure p5 canvas has correct responsive styling */
+canvas {
+  display: block;
+  border-radius: 24px;
+}

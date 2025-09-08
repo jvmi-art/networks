@@ -1,0 +1,596 @@
+/** @format */
+
+import React, { useRef, useState, useCallback } from 'react';
+import { Canvas } from '@react-three/fiber';
+import { OrbitControls, Stars } from '@react-three/drei';
+import * as THREE from 'three';
+import { useCanvasSettings } from '../../contexts/CanvasSettingsContext';
+import { useTheme } from '../../theme/theme-provider';
+import { useColorAnimation } from '../../hooks/useColorAnimation';
+import { generateCubeChunkPattern } from '../../utils/chunkPattern';
+import { Button } from '../../components/ui/button';
+import { RotateCcw, ChevronLeft, ChevronRight } from 'lucide-react';
+import AnimatedLogo from '../../components/AnimatedLogo';
+import { Circle3D } from '../entities/Circle3D';
+import { Cube } from './Cube';
+import { mapToRoundedCube } from '../utils/roundedCubeMapping';
+import { CAMERA_POSITIONS, CameraPositionKey } from '../constants/cameraPositions';
+
+
+// Main ThreeDimensionalCanvas component
+interface ThreeDimensionalCanvasProps {
+  customGridColors?: string[][];
+  isEditMode?: boolean;
+  colorPalette?: string[];
+  hideControls?: boolean;
+  randomColorAnimation?: boolean;
+  useRandomColors?: boolean;
+}
+
+const ThreeDimensionalCanvas: React.FC<ThreeDimensionalCanvasProps> = ({
+  customGridColors,
+  isEditMode = false,
+  colorPalette,
+  hideControls = false,
+  randomColorAnimation = false,
+  useRandomColors = false
+}) => {
+  const { settings } = useCanvasSettings();
+  const { theme } = useTheme();
+  const [circles, setCircles] = useState<Circle3D[]>([]);
+  const [dimensions, setDimensions] = useState({ width: 600, height: 600 });
+  const [cubeChunkPattern, setCubeChunkPattern] = useState<boolean[][][]>([]);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const orbitControlsRef = useRef<any>(null);
+  const [isAnimating, setIsAnimating] = useState(false);
+  const wasAutoRotatingRef = useRef(!isEditMode);
+  const [animationTarget, setAnimationTarget] = useState<{ position: THREE.Vector3; target: THREE.Vector3 } | null>(null);
+  const [currentFaceIndex, setCurrentFaceIndex] = useState(0);
+  const [isSceneLoading, setIsSceneLoading] = useState(true);
+  const [sceneInitialized, setSceneInitialized] = useState(false);
+  const [loadingExiting, setLoadingExiting] = useState(false);
+  const [foregroundFading, setForegroundFading] = useState(false);
+  const loadingStartTime = useRef(Date.now());
+  const isFirstLoad = useRef(true);
+  
+  // Face order for navigation: default, front, right, back, left, top, bottom
+  const faceOrder = ['default', 'front', 'right', 'back', 'left', 'top', 'bottom'] as const;
+
+  // Generate cube-wide chunk pattern when fillPercentage changes
+  React.useEffect(() => {
+    const gridWidth = settings.gridWidth || settings.gridSize;
+    const gridHeight = settings.gridHeight || settings.gridSize;
+    const patterns = generateCubeChunkPattern(gridWidth, gridHeight, settings.fillPercentage);
+    setCubeChunkPattern(patterns);
+  }, [settings.fillPercentage, settings.gridSize, settings.gridWidth, settings.gridHeight]);
+
+  // Generate circles for all 6 faces of the cube following the curved surface
+  const generateCubeCircles = useCallback(() => {
+    const newCircles: Circle3D[] = [];
+    const positionMap = new Map<string, Circle3D>();
+    // Use the same grid dimensions as P5Canvas
+    const gridWidth = settings.gridWidth || settings.gridSize;
+    const gridHeight = settings.gridHeight || settings.gridSize;
+    const cubeSize = 2;
+    const cornerRadius = 0.25; // Same corner radius as the cube geometry
+    const faceRoundness = 0.35; // Same face roundness as the cube geometry
+
+    // Dynamic padding and sizing based on grid dimensions
+    const maxDimension = Math.max(gridWidth, gridHeight);
+
+    // Less padding for 5x5 to maximize circle size
+    // 5x5: 8% padding, 10x10: 7% padding, 15x15: 5%, 20x20: 3.5%, 25x25: 2.5%
+    const paddingRatio =
+      maxDimension <= 5
+        ? 0.12
+        : maxDimension <= 10
+        ? 0.07
+        : maxDimension <= 15
+        ? 0.05
+        : maxDimension <= 20
+        ? 0.04
+        : 0.033;
+    const effectiveSize = cubeSize * (1 - 2 * paddingRatio);
+
+    // Calculate spacing between circles
+    const spacing = effectiveSize / (maxDimension - 1);
+
+    // Dynamic circle size calculation
+    const baseCircleSizeFactor = theme === 'light' ? 0.36 : 0.324;
+
+    // Bigger circles for 5x5 to minimize gaps
+    // 5x5: factor = 0.95, 10x10: factor = 0.85, 15x15: factor = 0.88, 20x20: factor = 0.94, 25x25: factor = 1.0
+    const sizeScaleFactor =
+      maxDimension <= 5
+        ? 0.85
+        : maxDimension <= 10
+        ? 0.85
+        : maxDimension <= 15
+        ? 0.88
+        : maxDimension <= 20
+        ? 0.94
+        : 1.0;
+    const circleSize = spacing * baseCircleSizeFactor * sizeScaleFactor;
+
+    // Offset to center the padded grid
+    const offset = effectiveSize / 2;
+
+
+    // Generate circles for each face following the curved surface
+    for (let face = 0; face < 6; face++) {
+      for (let row = 0; row < gridHeight; row++) {
+        for (let col = 0; col < gridWidth; col++) {
+          // Calculate position within the padded grid area
+          // Handle edge case when grid dimension is 1
+          const u = gridWidth === 1 ? 0 : (col / (gridWidth - 1)) * effectiveSize - offset;
+          const v = gridHeight === 1 ? 0 : (row / (gridHeight - 1)) * effectiveSize - offset;
+
+          // Position circles on the cube face
+          const faceOffset = cubeSize / 2;
+          let x = 0,
+            y = 0,
+            z = 0;
+
+          switch (face) {
+            case 0: // Front face
+              x = u;
+              y = -v;
+              z = faceOffset;
+              break;
+            case 1: // Back face
+              x = -u;
+              y = -v;
+              z = -faceOffset;
+              break;
+            case 2: // Right face
+              x = faceOffset;
+              y = -v;
+              z = -u;
+              break;
+            case 3: // Left face
+              x = -faceOffset;
+              y = -v;
+              z = u;
+              break;
+            case 4: // Top face
+              x = u;
+              y = faceOffset;
+              z = v;
+              break;
+            case 5: // Bottom face
+              x = u;
+              y = -faceOffset;
+              z = -v;
+              break;
+          }
+
+          // Map the flat position to the curved surface
+          const curvedPos = mapToRoundedCube(x, y, z, cubeSize, cornerRadius, faceRoundness);
+
+          // Position circles exactly on the surface (half in, half out)
+          const pushOutFactor = 1.0; // No push out - circles sit exactly on the surface
+          curvedPos.x *= pushOutFactor;
+          curvedPos.y *= pushOutFactor;
+          curvedPos.z *= pushOutFactor;
+
+          // Create a key for position deduplication (rounded to avoid floating point issues)
+          const posKey = `${Math.round(curvedPos.x * 1000)},${Math.round(
+            curvedPos.y * 1000
+          )},${Math.round(curvedPos.z * 1000)}`;
+
+          // Skip if we already have a circle at this position
+          if (positionMap.has(posKey)) {
+            continue;
+          }
+
+          // Generate truly random color if useRandomColors is true, otherwise use palette
+          let color: string;
+          if (useRandomColors) {
+            // Generate a completely random hex color
+            color = '#' + Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0');
+          } else if (colorPalette) {
+            // Use color from palette
+            color = colorPalette[Math.floor(Math.random() * colorPalette.length)];
+          } else {
+            // Fallback to random color
+            color = '#' + Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0');
+          }
+
+          // Determine if this circle should be enabled based on cube chunk pattern
+          let isEnabled = true;
+          if (cubeChunkPattern.length > 0 && 
+              cubeChunkPattern[face] && 
+              cubeChunkPattern[face][row] && 
+              cubeChunkPattern[face][row][col] !== undefined) {
+            isEnabled = cubeChunkPattern[face][row][col];
+          }
+
+          const circle = new Circle3D(curvedPos.x, curvedPos.y, curvedPos.z, circleSize, color, isEnabled);
+          
+          // Set the disabled color based on theme
+          if (!isEnabled) {
+            circle.setEnabled(false, theme);
+          }
+          
+          // Setup animation but don't start it yet
+          // Configuration for circle animation timing
+          const CIRCLE_ANIMATION_CONFIG = {
+            targetTotalTime: 1000,  // Target total time for all circles to animate (1s)
+            minDelay: 0,           // Minimum delay for any circle
+          };
+          
+          // Scale max delay inversely with grid size
+          // This ensures larger grids animate faster per circle
+          const maxDelay = Math.max(
+            200, // Minimum 200ms max delay
+            Math.min(
+              CIRCLE_ANIMATION_CONFIG.targetTotalTime,
+              CIRCLE_ANIMATION_CONFIG.targetTotalTime * (25 / Math.max(gridWidth, 10))
+            )
+          );
+          
+          const randomDelay = Math.random() * maxDelay;
+          circle.startEnterAnimation(randomDelay, theme, false); // false = don't start immediately
+          positionMap.set(posKey, circle);
+          newCircles.push(circle);
+        }
+      }
+    }
+
+    return newCircles;
+  }, [
+    settings.gridSize,
+    settings.gridWidth,
+    settings.gridHeight,
+    customGridColors,
+    theme,
+    colorPalette,
+    cubeChunkPattern
+  ]);
+
+  // Initialize circles immediately for rendering
+  React.useEffect(() => {
+    const newCircles = generateCubeCircles();
+    setCircles(newCircles);
+    setSceneInitialized(true);
+    
+    // If this is not the first load (e.g., when switching sizes via tabs),
+    // trigger animations immediately without loading screen
+    if (!isFirstLoad.current) {
+      setTimeout(() => {
+        newCircles.forEach(circle => {
+          circle.triggerAnimation();
+        });
+      }, 100); // Small delay to ensure render
+    }
+  }, [generateCubeCircles]);
+  
+  // Handle scene ready callback from Cube component
+  const handleSceneReady = useCallback(() => {
+    // Calculate time elapsed since loading started
+    const elapsed = Date.now() - loadingStartTime.current;
+    
+    // Configuration for consistent timing across all grid sizes
+    const LOADING_CONFIG = {
+      logoDisplayTime: 1000,        // How long logo shows before fade
+      logoFadeTime: 300,            // Logo fade out duration
+      panelSplitTime: 800,          // Panel split animation duration
+      circleAnimationDelay: -400,   // Start circles 400ms BEFORE panels finish (negative = early)
+    };
+    
+    // Total time for loading sequence (before circles animate)
+    const totalLoadingTime = 
+      LOADING_CONFIG.logoDisplayTime + 
+      LOADING_CONFIG.logoFadeTime + 
+      LOADING_CONFIG.panelSplitTime;
+    
+    // Calculate remaining time to wait
+    const remainingTime = Math.max(0, totalLoadingTime - elapsed);
+    
+    // Wait for minimum time
+    setTimeout(() => {
+      // First fade out the foreground content
+      setForegroundFading(true);
+      
+      // Then start the split animation
+      setTimeout(() => {
+        setLoadingExiting(true);
+        
+        // Trigger circles early (while panels are still sliding)
+        const circleDelay = Math.max(0, LOADING_CONFIG.panelSplitTime + LOADING_CONFIG.circleAnimationDelay);
+        setTimeout(() => {
+          circles.forEach(circle => {
+            circle.triggerAnimation();
+          });
+        }, circleDelay);
+        
+        // Hide loading screen after panel animation completes
+        setTimeout(() => {
+          setIsSceneLoading(false);
+          // Mark that first load is complete
+          isFirstLoad.current = false;
+        }, LOADING_CONFIG.panelSplitTime);
+      }, LOADING_CONFIG.logoFadeTime);
+    }, remainingTime);
+  }, [circles]);
+
+  // Update circle enabled states when pattern or theme changes
+  React.useEffect(() => {
+    circles.forEach((circle, index) => {
+      // Calculate which face, row, col this circle belongs to
+      const gridWidth = settings.gridWidth || settings.gridSize;
+      const gridHeight = settings.gridHeight || settings.gridSize;
+      const circlesPerFace = gridWidth * gridHeight;
+      const face = Math.floor(index / circlesPerFace);
+      const positionOnFace = index % circlesPerFace;
+      const row = Math.floor(positionOnFace / gridWidth);
+      const col = positionOnFace % gridWidth;
+      
+      let shouldBeEnabled = true;
+      if (cubeChunkPattern.length > 0 && 
+          cubeChunkPattern[face] && 
+          cubeChunkPattern[face][row] && 
+          cubeChunkPattern[face][row][col] !== undefined) {
+        shouldBeEnabled = cubeChunkPattern[face][row][col];
+      }
+      
+      if (circle.isEnabled !== shouldBeEnabled) {
+        circle.setEnabled(shouldBeEnabled, theme);
+        // If we're enabling a circle that was disabled and animations have already run,
+        // trigger its animation
+        if (shouldBeEnabled && !isFirstLoad.current && circle.enterStartTime === 0) {
+          circle.triggerAnimation();
+        }
+      }
+    });
+  }, [cubeChunkPattern, theme, circles, settings.gridSize, settings.gridWidth, settings.gridHeight]);
+
+  // Use the color animation hook for cleaner implementation
+  // For random palette, generate random colors on the fly
+  useColorAnimation({
+    circles,
+    colorPalette: useRandomColors ? undefined : colorPalette,
+    isAnimating: randomColorAnimation,
+    transitionSpeed: 0.15,
+    intervalRange: { min: 400, max: 600 }
+  });
+
+  const backgroundColor = theme === 'light' ? '#ffffff' : '#000000';
+
+  // Calculate canvas dimensions based on hideControls
+  const getCanvasDimensions = useCallback(() => {
+    if (hideControls) {
+      // Full window when controls are hidden
+      return {
+        width: window.innerWidth,
+        height: window.innerHeight
+      };
+    } else {
+      // Fixed size with max 600px when controls are visible
+      const isMobile = window.innerWidth < 640;
+      const headerHeight = isMobile ? 180 : 120;
+      const horizontalPadding = 40;
+      const verticalPadding = 40;
+
+      const maxWidth = Math.min(600, window.innerWidth - horizontalPadding);
+      const maxHeight = Math.min(600, window.innerHeight - headerHeight - verticalPadding);
+
+      // Use the smaller dimension to maintain square aspect ratio
+      const size = Math.min(maxWidth, maxHeight);
+
+      return {
+        width: size,
+        height: size
+      };
+    }
+  }, [hideControls]);
+
+  // Handle window resize
+  React.useEffect(() => {
+    const handleResize = () => {
+      setDimensions(getCanvasDimensions());
+    };
+
+    // Set initial dimensions
+    handleResize();
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [getCanvasDimensions]);
+
+  const canvasStyle = hideControls
+    ? { width: '100vw', height: '100vh' }
+    : { width: `${dimensions.width}px`, height: `${dimensions.height}px` };
+
+  // Handle camera animation to any position
+  const animateToPosition = useCallback((targetKey: CameraPositionKey) => {
+    if (!isAnimating && orbitControlsRef.current) {
+      setIsAnimating(true);
+      // Store current auto-rotate state and disable it
+      wasAutoRotatingRef.current = orbitControlsRef.current.autoRotate;
+      orbitControlsRef.current.autoRotate = false;
+      // Set the animation target
+      setAnimationTarget(CAMERA_POSITIONS[targetKey]);
+    }
+  }, [isAnimating]);
+
+  // Called when any animation completes
+  const handleAnimationComplete = useCallback(() => {
+    // Small delay to ensure smooth transition
+    requestAnimationFrame(() => {
+      if (orbitControlsRef.current) {
+        // Only restore auto-rotate if we're at the default position
+        if (currentFaceIndex === 0) {
+          orbitControlsRef.current.autoRotate = wasAutoRotatingRef.current;
+        } else {
+          orbitControlsRef.current.autoRotate = false;
+        }
+        orbitControlsRef.current.update();
+      }
+      setIsAnimating(false);
+      setAnimationTarget(null);
+    });
+  }, [currentFaceIndex]);
+
+  // Navigate to previous face
+  const handlePreviousFace = useCallback(() => {
+    const newIndex = (currentFaceIndex - 1 + faceOrder.length) % faceOrder.length;
+    setCurrentFaceIndex(newIndex);
+    animateToPosition(faceOrder[newIndex]);
+  }, [currentFaceIndex, animateToPosition]);
+
+  // Navigate to next face
+  const handleNextFace = useCallback(() => {
+    const newIndex = (currentFaceIndex + 1) % faceOrder.length;
+    setCurrentFaceIndex(newIndex);
+    animateToPosition(faceOrder[newIndex]);
+  }, [currentFaceIndex, animateToPosition]);
+
+  // Reset camera (always goes to default)
+  const handleResetCamera = useCallback(() => {
+    setCurrentFaceIndex(0);
+    animateToPosition('default');
+  }, [animateToPosition]);
+
+  return (
+    <div
+      className={`${
+        hideControls ? 'w-screen h-screen' : 'w-full h-full flex justify-center items-center'
+      }`}
+    >
+      <div style={canvasStyle} className="relative overflow-hidden">
+        {/* Loading screen with split panel animation */}
+        {isSceneLoading && (
+          <div className="absolute inset-0 z-50">
+            {/* Top panel - just solid color */}
+            <div 
+              className="absolute top-0 left-0 right-0 h-1/2"
+              style={{ 
+                backgroundColor: theme === 'light' ? '#ffffff' : '#000000',
+                transform: loadingExiting ? 'translateY(-100%)' : 'translateY(0)',
+                transition: 'transform 0.8s cubic-bezier(0.76, 0, 0.24, 1)'
+              }}
+            />
+            
+            {/* Bottom panel - just solid color */}
+            <div 
+              className="absolute bottom-0 left-0 right-0 h-1/2"
+              style={{ 
+                backgroundColor: theme === 'light' ? '#ffffff' : '#000000',
+                transform: loadingExiting ? 'translateY(100%)' : 'translateY(0)',
+                transition: 'transform 0.8s cubic-bezier(0.76, 0, 0.24, 1)'
+              }}
+            />
+            
+            {/* Center divider line */}
+            <div 
+              className="absolute left-0 right-0 h-px"
+              style={{ 
+                top: '50%',
+                backgroundColor: theme === 'light' ? '#e5e5e5' : '#333333',
+                opacity: loadingExiting ? 0 : 0.3,
+                transition: 'opacity 0.3s ease-out'
+              }}
+            />
+            
+            {/* Loading content - absolutely positioned in center */}
+            <div 
+              className="absolute inset-0 flex items-center justify-center pointer-events-none"
+              style={{
+                opacity: foregroundFading ? 0 : 1,
+                transition: 'opacity 0.3s ease-out',
+                color: theme === 'light' ? '#000000' : '#ffffff'
+              }}
+            >
+              <AnimatedLogo size={150} />
+            </div>
+          </div>
+        )}
+        <Canvas 
+          camera={{ position: [3, 3, 3], fov: 50 }} 
+          style={{ 
+            background: backgroundColor,
+            opacity: sceneInitialized ? 1 : 0,
+            transition: 'opacity 0.3s ease-in-out'
+          }}
+        >
+          {/* Starfield background */}
+          <Stars
+            radius={100}
+            depth={50}
+            count={3000}
+            factor={8}
+            saturation={0}
+            fade={true}
+            speed={0.5}
+          />
+
+          {/* Add fog for depth effect */}
+          <fog attach='fog' args={[backgroundColor, 5, 15]} />
+
+          <OrbitControls
+            ref={orbitControlsRef}
+            enableZoom={true}
+            enablePan={false}
+            minDistance={2}
+            maxDistance={8}
+            autoRotate={!isEditMode}
+            autoRotateSpeed={0.5}
+            enableDamping={true}
+            dampingFactor={0.05}
+          />
+
+          <ambientLight intensity={theme === 'light' ? 1.0 : 0.6} />
+          <directionalLight position={[10, 10, 5]} intensity={theme === 'light' ? 0.5 : 0.8} />
+
+          <Cube 
+            circles={circles} 
+            theme={theme}
+            orbitControlsRef={orbitControlsRef}
+            animationTarget={animationTarget}
+            onAnimationComplete={handleAnimationComplete}
+            onSceneReady={handleSceneReady}
+          />
+        </Canvas>
+        
+        {/* Legend with camera controls - positioned at bottom left */}
+        <div className="absolute bottom-4 left-4 bg-background/80 backdrop-blur-sm rounded-lg p-2 shadow-lg border">
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handlePreviousFace}
+              disabled={isAnimating}
+              className="h-8 w-8"
+              title="Previous face"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleResetCamera}
+              disabled={isAnimating}
+              className="h-8 w-8"
+              title="Reset to default view"
+            >
+              <RotateCcw className={`h-4 w-4 ${isAnimating && currentFaceIndex === 0 ? 'animate-spin' : ''}`} />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleNextFace}
+              disabled={isAnimating}
+              className="h-8 w-8"
+              title="Next face"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default ThreeDimensionalCanvas;
