@@ -517,9 +517,6 @@ const ThreeDimensionalCanvas: React.FC<ThreeDimensionalCanvasProps> = ({
             speed={0.5}
           />
 
-          {/* Add fog for depth effect */}
-          <fog attach='fog' args={[backgroundColor, 5, 15]} />
-
           <OrbitControls
             ref={orbitControlsRef}
             enableZoom={true}

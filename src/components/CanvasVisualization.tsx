@@ -99,29 +99,12 @@ function CanvasVisualization() {
       {/* Header with controls */}
       {!hideControls && (
         <header className='fixed top-0 left-0 right-0 z-[49] p-2 sm:p-4'>
-          <div className='flex flex-col sm:flex-row gap-2 sm:gap-0 sm:items-center sm:justify-between'>
-            {/* Settings and Mode Tabs - Stack on mobile */}
-            <div className='flex flex-col sm:flex-row items-center gap-2'>
-              {/* First row on mobile: Settings and Mode Tabs */}
-              <div className='flex items-center gap-2 w-full sm:w-auto justify-center sm:justify-start'>
-                <ControlPanel 
-                  mode={activeMode} 
-                  selectedPalette={selectedPalette}
-                  onPaletteChange={setSelectedPalette}
-                  randomColorAnimation={randomColorAnimation}
-                  onRandomColorAnimationChange={setRandomColorAnimation}
-                />
-                <ModeTabs activeTab={activeMode} onTabChange={setActiveMode} />
-              </div>
-
-              {/* Second row on mobile: Dimension Tabs (for both modes) */}
-              <div className='flex justify-center w-full sm:w-auto'>
-                <DimensionTabs mode={activeMode} />
-              </div>
-            </div>
+          <div className='flex items-center justify-between'>
+            {/* Left side - empty for now */}
+            <div></div>
 
             {/* Right side controls container */}
-            <div className='flex items-center gap-2 justify-center sm:justify-end'>
+            <div className='flex items-center gap-2'>
               {/* Edit Mode Controls - only show in node mode */}
               {activeMode === 'node' && (
                 <EditModeControls
@@ -132,6 +115,14 @@ function CanvasVisualization() {
                   onRandomize={handleRandomize}
                 />
               )}
+              <ModeTabs activeTab={activeMode} onTabChange={setActiveMode} />
+              <ControlPanel 
+                mode={activeMode} 
+                selectedPalette={selectedPalette}
+                onPaletteChange={setSelectedPalette}
+                randomColorAnimation={randomColorAnimation}
+                onRandomColorAnimationChange={setRandomColorAnimation}
+              />
             </div>
           </div>
         </header>

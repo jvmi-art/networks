@@ -4,11 +4,14 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { RiSettings3Fill, RiShapeFill, RiPaletteFill, RiArrowDownSLine } from '@remixicon/react';
 import { Sheet, SheetContent, SheetHeader, SheetTrigger } from './ui/sheet';
+import { Drawer, DrawerContent, DrawerHeader, DrawerTrigger } from './ui/drawer';
 import { Slider } from './ui/slider';
 import { Switch } from './ui/switch';
 import { useTheme } from '../theme/theme-provider';
 import { useCanvasSettings } from '../contexts/CanvasSettingsContext';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { NODE_DIMENSIONS, CUBE_DIMENSIONS } from '../constants';
+import { Tabs, TabsList, TabsTrigger } from './ui/tabs';
 
 /**
  * ControlPanel now uses context - no props needed
@@ -69,9 +72,7 @@ const ControlRow: React.FC<ControlRowProps> = ({ label, theme, children, current
   };
 
   const getContainerClass = () => {
-    return theme === 'light'
-      ? 'bg-black/5 border border-black/10 rounded-lg p-4 sm:p-3'
-      : 'bg-white/5 border border-white/10 rounded-lg p-4 sm:p-3';
+    return 'py-4 sm:py-3';
   };
 
   return (
@@ -125,8 +126,8 @@ const SliderControl: React.FC<SliderControlProps> = ({
         aria-label={ariaLabel}
         className={`w-full ${
           theme === 'light'
-            ? '[&_[data-slot=slider-track]]:bg-black/10 [&_[data-slot=slider-track]]:h-3 sm:[&_[data-slot=slider-track]]:h-2 [&_[data-slot=slider-range]]:bg-black/40 [&_[data-slot=slider-thumb]]:border-black/40 [&_[data-slot=slider-thumb]]:bg-white [&_[data-slot=slider-thumb]]:w-6 [&_[data-slot=slider-thumb]]:h-6 sm:[&_[data-slot=slider-thumb]]:w-5 sm:[&_[data-slot=slider-thumb]]:h-5'
-            : '[&_[data-slot=slider-track]]:bg-white/10 [&_[data-slot=slider-track]]:h-3 sm:[&_[data-slot=slider-track]]:h-2 [&_[data-slot=slider-range]]:bg-white/40 [&_[data-slot=slider-thumb]]:border-white/40 [&_[data-slot=slider-thumb]]:bg-black [&_[data-slot=slider-thumb]]:w-6 [&_[data-slot=slider-thumb]]:h-6 sm:[&_[data-slot=slider-thumb]]:w-5 sm:[&_[data-slot=slider-thumb]]:h-5'
+            ? '[&_[data-slot=slider-track]]:bg-black/5 [&_[data-slot=slider-track]]:backdrop-blur-sm [&_[data-slot=slider-track]]:h-3 sm:[&_[data-slot=slider-track]]:h-2 [&_[data-slot=slider-range]]:bg-black/30 [&_[data-slot=slider-thumb]]:border-black/30 [&_[data-slot=slider-thumb]]:bg-white/90 [&_[data-slot=slider-thumb]]:backdrop-blur-sm [&_[data-slot=slider-thumb]]:w-6 [&_[data-slot=slider-thumb]]:h-6 sm:[&_[data-slot=slider-thumb]]:w-5 sm:[&_[data-slot=slider-thumb]]:h-5'
+            : '[&_[data-slot=slider-track]]:bg-white/5 [&_[data-slot=slider-track]]:backdrop-blur-sm [&_[data-slot=slider-track]]:h-3 sm:[&_[data-slot=slider-track]]:h-2 [&_[data-slot=slider-range]]:bg-white/30 [&_[data-slot=slider-thumb]]:border-white/30 [&_[data-slot=slider-thumb]]:bg-black/90 [&_[data-slot=slider-thumb]]:backdrop-blur-sm [&_[data-slot=slider-thumb]]:w-6 [&_[data-slot=slider-thumb]]:h-6 sm:[&_[data-slot=slider-thumb]]:w-5 sm:[&_[data-slot=slider-thumb]]:h-5'
         }`}
       />
     </div>
@@ -158,14 +159,14 @@ const EditableValue: React.FC<EditableValueProps> = ({
 }) => {
   const getDefaultButtonClass = () => {
     return theme === 'light'
-      ? 'border-black/30 bg-black/10 text-black'
-      : 'border-white/30 bg-white/10 text-white';
+      ? 'border-black/20 bg-black/5 backdrop-blur-sm text-black'
+      : 'border-white/20 bg-white/5 backdrop-blur-sm text-white';
   };
 
   const getInputClass = () => {
     return theme === 'light'
-      ? 'bg-black/10 border-black/30 rounded-full py-2 sm:py-1.5 px-3 text-black text-sm w-[80px] sm:w-[70px] min-h-[44px] sm:min-h-0'
-      : 'bg-white/10 border-white/30 rounded-full py-2 sm:py-1.5 px-3 text-white text-sm w-[80px] sm:w-[70px] min-h-[44px] sm:min-h-0';
+      ? 'bg-black/5 backdrop-blur-sm border-black/20 rounded-full py-2 sm:py-1.5 px-3 text-black text-sm w-[80px] sm:w-[70px] min-h-[44px] sm:min-h-0'
+      : 'bg-white/5 backdrop-blur-sm border-white/20 rounded-full py-2 sm:py-1.5 px-3 text-white text-sm w-[80px] sm:w-[70px] min-h-[44px] sm:min-h-0';
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -237,10 +238,10 @@ const SwitchControl: React.FC<SwitchControlProps> = ({
         onCheckedChange={onCheckedChange}
         aria-label={ariaLabel}
         size='lg'
-        className={`${
+        className={`backdrop-blur-sm ${
           theme === 'light'
-            ? 'data-[state=checked]:bg-black/70 data-[state=unchecked]:bg-black/10 border-black/20'
-            : 'data-[state=checked]:bg-white/70 data-[state=unchecked]:bg-white/10 border-white/20'
+            ? 'data-[state=checked]:bg-black/60 data-[state=unchecked]:bg-black/5 border-black/15'
+            : 'data-[state=checked]:bg-white/60 data-[state=unchecked]:bg-white/5 border-white/15'
         }`}
       />
     </div>
@@ -276,14 +277,14 @@ const DropdownControl: React.FC<DropdownControlProps> = ({
 
   const getTriggerClass = () => {
     return theme === 'light'
-      ? 'bg-black/10 border-black/20 text-black hover:bg-black/15 h-auto py-3 sm:py-2'
-      : 'bg-white/10 border-white/20 text-white hover:bg-white/15 h-auto py-3 sm:py-2';
+      ? 'bg-black/5 backdrop-blur-sm border-black/15 text-black hover:bg-black/10 h-auto py-3 sm:py-2'
+      : 'bg-white/5 backdrop-blur-sm border-white/15 text-white hover:bg-white/10 h-auto py-3 sm:py-2';
   };
 
   const getContentClass = () => {
     return theme === 'light'
-      ? 'bg-white/95 border-black/20 text-black backdrop-blur-md'
-      : 'bg-black/95 border-white/20 text-white backdrop-blur-md';
+      ? 'bg-white/85 border-black/10 text-black backdrop-blur-xl'
+      : 'bg-black/85 border-white/10 text-white backdrop-blur-xl';
   };
 
   const getItemClass = () => {
@@ -341,8 +342,8 @@ const PaletteDropdownControl: React.FC<PaletteDropdownControlProps> = ({
 
   const getTriggerClass = () => {
     return theme === 'light'
-      ? 'bg-black/10 border-black/20 text-black hover:bg-black/15 h-auto py-3 sm:py-2'
-      : 'bg-white/10 border-white/20 text-white hover:bg-white/15 h-auto py-3 sm:py-2';
+      ? 'bg-black/5 backdrop-blur-sm border-black/15 text-black hover:bg-black/10 h-auto py-3 sm:py-2'
+      : 'bg-white/5 backdrop-blur-sm border-white/15 text-white hover:bg-white/10 h-auto py-3 sm:py-2';
   };
 
   const getContentClass = () => {
@@ -405,6 +406,101 @@ const PaletteDropdownControl: React.FC<PaletteDropdownControlProps> = ({
         </SelectContent>
       </Select>
     </div>
+  );
+};
+
+interface DimensionSelectorProps {
+  mode: 'node' | 'block';
+  theme: 'light' | 'dark';
+}
+
+const DimensionSelector: React.FC<DimensionSelectorProps> = ({ mode, theme }) => {
+  const { settings, updateSettings } = useCanvasSettings();
+  
+  // Determine current dimension based on settings and mode
+  const getCurrentDimension = (): string => {
+    const width = settings.gridWidth || settings.gridSize;
+    const height = settings.gridHeight || settings.gridSize;
+    
+    const dimensions = mode === 'block' ? CUBE_DIMENSIONS : NODE_DIMENSIONS;
+    
+    // Find matching dimension configuration
+    for (const [key, config] of Object.entries(dimensions)) {
+      if (config.gridWidth === width && config.gridHeight === height) {
+        return key;
+      }
+    }
+    return '5x5'; // Default
+  };
+
+  const currentDimension = getCurrentDimension();
+
+  const handleDimensionChange = (dimension: string) => {
+    const dimensions = mode === 'block' ? CUBE_DIMENSIONS : NODE_DIMENSIONS;
+    const config = dimensions[dimension as keyof typeof dimensions];
+    if (config) {
+      updateSettings({
+        gridWidth: config.gridWidth,
+        gridHeight: config.gridHeight,
+        gridSize: Math.max(config.gridWidth, config.gridHeight), // For backward compatibility
+        canvasWidth: config.canvasWidth,
+        canvasHeight: config.canvasHeight,
+        canvasSize: Math.max(config.canvasWidth, config.canvasHeight), // For backward compatibility
+        padding: config.padding
+      });
+    }
+  };
+
+  const getTabTriggerClass = () => {
+    return theme === 'light'
+      ? 'data-[state=active]:bg-black/10 data-[state=active]:text-black text-gray-600 hover:text-gray-800 rounded-md transition-colors'
+      : 'data-[state=active]:bg-white/10 data-[state=active]:text-white text-gray-400 hover:text-gray-200 rounded-md transition-colors';
+  };
+
+  return (
+    <Tabs value={currentDimension} onValueChange={handleDimensionChange} className="w-full">
+      <TabsList className={`grid ${mode === 'block' ? 'grid-cols-5' : 'grid-cols-5'} gap-1 h-auto p-0 bg-transparent border-0 w-full`}>
+        {mode === 'block' ? (
+          // Cube dimensions for 3D mode (only square grids)
+          <>
+            <TabsTrigger value="5x5" className={`${getTabTriggerClass()} py-3 text-sm font-medium`}>
+              5×5
+            </TabsTrigger>
+            <TabsTrigger value="10x10" className={`${getTabTriggerClass()} py-3 text-sm font-medium`}>
+              10×10
+            </TabsTrigger>
+            <TabsTrigger value="15x15" className={`${getTabTriggerClass()} py-3 text-sm font-medium`}>
+              15×15
+            </TabsTrigger>
+            <TabsTrigger value="20x20" className={`${getTabTriggerClass()} py-3 text-sm font-medium`}>
+              20×20
+            </TabsTrigger>
+            <TabsTrigger value="25x25" className={`${getTabTriggerClass()} py-3 text-sm font-medium`}>
+              25×25
+            </TabsTrigger>
+          </>
+        ) : (
+          // Node dimensions for 2D mode - includes rectangular options
+          <>
+            <TabsTrigger value="5x5" className={`${getTabTriggerClass()} py-3 text-sm font-medium`}>
+              5×5
+            </TabsTrigger>
+            <TabsTrigger value="5x10" className={`${getTabTriggerClass()} py-3 text-sm font-medium`}>
+              5×10
+            </TabsTrigger>
+            <TabsTrigger value="10x5" className={`${getTabTriggerClass()} py-3 text-sm font-medium`}>
+              10×5
+            </TabsTrigger>
+            <TabsTrigger value="10x10" className={`${getTabTriggerClass()} py-3 text-sm font-medium`}>
+              10×10
+            </TabsTrigger>
+            <TabsTrigger value="25x25" className={`${getTabTriggerClass()} py-3 text-sm font-medium`}>
+              25×25
+            </TabsTrigger>
+          </>
+        )}
+      </TabsList>
+    </Tabs>
   );
 };
 
@@ -483,27 +579,29 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
 
   // Destructure settings for easier access
   const {
-    gridSize,
-    gridWidth,
-    gridHeight,
     gapFactor,
     padding,
     strokeWidth,
     hoverScale,
     renderMode,
-    magneticEffect,
-    animationsEnabled,
     fillPercentage
   } = settings;
   const [sheetOpen, setSheetOpen] = useState<boolean>(false);
-  const [editingGridSize, setEditingGridSize] = useState<boolean>(false);
+  const [isMobile, setIsMobile] = useState<boolean>(false);
+
+  // Detect mobile screen size
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 640); // sm breakpoint
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
   const [editingGapFactor, setEditingGapFactor] = useState<boolean>(false);
   const [editingPadding, setEditingPadding] = useState<boolean>(false);
   const [editingStrokeWidth, setEditingStrokeWidth] = useState<boolean>(false);
   const [editingHoverScale, setEditingHoverScale] = useState<boolean>(false);
-  const [gridInputValue, setGridInputValue] = useState<number>(gridSize);
-  const [, setGridWidthValue] = useState<number>(gridWidth || gridSize);
-  const [, setGridHeightValue] = useState<number>(gridHeight || gridSize);
   const [gapInputValue, setGapInputValue] = useState<number>(gapFactor);
   const [paddingInputValue, setPaddingInputValue] = useState<number>(padding);
   const [strokeWidthValue, setStrokeWidthValue] = useState<number>(strokeWidth);
@@ -511,42 +609,15 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
 
   // Update local states when props change
   useEffect(() => {
-    setGridInputValue(gridSize);
-    setGridWidthValue(gridWidth || gridSize);
-    setGridHeightValue(gridHeight || gridSize);
     setGapInputValue(gapFactor);
     setPaddingInputValue(padding);
     setStrokeWidthValue(strokeWidth);
     setHoverScaleValue(hoverScale);
-  }, [gridSize, gridWidth, gridHeight, gapFactor, padding, strokeWidth, hoverScale]);
+  }, [gapFactor, padding, strokeWidth, hoverScale]);
 
   //------------------------------------------
   // Event Handlers
   //------------------------------------------
-
-  /**
-   * Handle grid size input changes
-   */
-  const handleGridChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = parseInt(e.target.value);
-    if (!isNaN(value) && value > 0) {
-      setGridInputValue(value);
-    }
-  };
-
-  /**
-   * Submit custom grid size
-   */
-  const submitGridSize = () => {
-    if (gridInputValue > 0) {
-      updateSettings({
-        gridSize: gridInputValue,
-        gridWidth: gridInputValue,
-        gridHeight: gridInputValue
-      });
-      setEditingGridSize(false);
-    }
-  };
 
   /**
    * Handle gap factor input changes
@@ -631,169 +702,142 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
   //------------------------------------------
   // Render
   //------------------------------------------
-  return (
-    <>
-      <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-        <SheetTrigger asChild>
-          <motion.button
-            className={`rounded-full ${
-              theme === 'light' ? 'text-black/60' : 'text-white/60'
-            } cursor-pointer text-xl flex items-center justify-center w-10 h-10 backdrop-blur-md ${
-              theme === 'light'
-                ? 'bg-white/90 border border-gray-200'
-                : 'bg-black/90 border border-white/10'
-            } transition-all duration-200`}
-            aria-label='Open settings'
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            variants={buttonVariants}
-          >
-            <RiSettings3Fill />
-          </motion.button>
-        </SheetTrigger>
+  
+  const settingsButton = (
+    <motion.button
+      className={`rounded-full ${
+        theme === 'light' ? 'text-black/60' : 'text-white/60'
+      } cursor-pointer text-xl flex items-center justify-center w-10 h-10 backdrop-blur-md ${
+        theme === 'light'
+          ? 'bg-white/90 border border-gray-200'
+          : 'bg-black/90 border border-white/10'
+      } transition-all duration-200`}
+      aria-label='Open settings'
+      whileHover={{ scale: 1.05 }}
+      whileTap={{ scale: 0.95 }}
+      variants={buttonVariants}
+    >
+      <RiSettings3Fill />
+    </motion.button>
+  );
 
-        <SheetContent
-          side='left'
-          className={`w-full sm:w-96 md:w-80 p-0 ${
-            theme === 'light'
-              ? 'border-r border-black/20 text-black bg-white/98 backdrop-blur-xl'
-              : 'border-r border-white/20 text-white bg-black/98 backdrop-blur-xl'
-          }`}
-        >
-          <SheetHeader className='p-4'></SheetHeader>
-
-          <div className='flex flex-col gap-8 px-4 pb-6 overflow-y-auto max-h-full'>
+  const settingsContent = (
+    <div className={`flex flex-col gap-${isMobile ? '6' : '8'} px-4 pb-6 overflow-y-auto ${
+      isMobile ? 'max-h-[calc(66vh-100px)]' : 'max-h-full'
+    }`}>
             {/* Shape Configuration Section */}
             <CollapsibleSection title='Shape Configuration' icon={<RiShapeFill />} theme={theme}>
-              <ControlRow label='Size' theme={theme} currentValue={`${gridSize} x ${gridSize}`}>
-                {editingGridSize ? (
-                  <EditableValue
-                    theme={theme}
-                    value={gridInputValue}
-                    onChange={handleGridChange}
-                    onSubmit={submitGridSize}
-                    onEditClick={() => setEditingGridSize(true)}
-                    inputProps={{ min: '2', max: '100' }}
-                    ariaLabel='Custom Grid Size'
-                  />
-                ) : (
-                  <SliderControl
-                    theme={theme}
-                    currentValue={gridSize}
-                    min={2}
-                    max={100}
-                    step={1}
-                    onChange={(value) =>
-                      updateSettings({
-                        gridSize: value,
-                        gridWidth: value,
-                        gridHeight: value
-                      })
-                    }
-                    ariaLabel='Grid Size'
-                  />
-                )}
-              </ControlRow>
+              <div className="flex flex-col gap-4 sm:gap-3 w-full py-4 sm:py-3">
+                <label className={theme === 'light' ? 'text-black text-sm font-medium' : 'text-white text-sm font-medium'}>
+                  Size
+                </label>
+                <DimensionSelector mode={mode} theme={theme} />
+              </div>
 
-              <ControlRow label='Spacing' theme={theme} currentValue={gapFactor}>
-                {editingGapFactor ? (
-                  <EditableValue
-                    theme={theme}
-                    value={gapInputValue}
-                    onChange={handleGapChange}
-                    onSubmit={submitGapFactor}
-                    onEditClick={() => setEditingGapFactor(true)}
-                    inputProps={{ min: '0.1', max: '2', step: '0.1' }}
-                    ariaLabel='Custom Gap Factor'
-                  />
-                ) : (
-                  <SliderControl
-                    theme={theme}
-                    currentValue={gapFactor}
-                    min={0.1}
-                    max={2}
-                    step={0.1}
-                    onChange={(value) => updateSettings({ gapFactor: value })}
-                    ariaLabel='Gap Factor'
-                  />
-                )}
-              </ControlRow>
+              {/* Only show these controls in node mode */}
+              {mode === 'node' && (
+                <>
+                  <ControlRow label='Spacing' theme={theme} currentValue={gapFactor}>
+                    {editingGapFactor ? (
+                      <EditableValue
+                        theme={theme}
+                        value={gapInputValue}
+                        onChange={handleGapChange}
+                        onSubmit={submitGapFactor}
+                        onEditClick={() => setEditingGapFactor(true)}
+                        inputProps={{ min: '0.1', max: '2', step: '0.1' }}
+                        ariaLabel='Custom Gap Factor'
+                      />
+                    ) : (
+                      <SliderControl
+                        theme={theme}
+                        currentValue={gapFactor}
+                        min={0.1}
+                        max={2}
+                        step={0.1}
+                        onChange={(value) => updateSettings({ gapFactor: value })}
+                        ariaLabel='Gap Factor'
+                      />
+                    )}
+                  </ControlRow>
 
-              <ControlRow label='Padding' theme={theme} currentValue={`${padding}px`}>
-                {editingPadding ? (
-                  <EditableValue
-                    theme={theme}
-                    value={paddingInputValue}
-                    onChange={handlePaddingChange}
-                    onSubmit={submitPadding}
-                    onEditClick={() => setEditingPadding(true)}
-                    inputProps={{ min: '0', max: '200' }}
-                    ariaLabel='Custom Padding'
-                  />
-                ) : (
-                  <SliderControl
-                    theme={theme}
-                    currentValue={padding}
-                    min={0}
-                    max={200}
-                    step={1}
-                    onChange={(value) => updateSettings({ padding: value })}
-                    ariaLabel='Canvas Padding'
-                  />
-                )}
-              </ControlRow>
+                  <ControlRow label='Padding' theme={theme} currentValue={`${padding}px`}>
+                    {editingPadding ? (
+                      <EditableValue
+                        theme={theme}
+                        value={paddingInputValue}
+                        onChange={handlePaddingChange}
+                        onSubmit={submitPadding}
+                        onEditClick={() => setEditingPadding(true)}
+                        inputProps={{ min: '0', max: '200' }}
+                        ariaLabel='Custom Padding'
+                      />
+                    ) : (
+                      <SliderControl
+                        theme={theme}
+                        currentValue={padding}
+                        min={0}
+                        max={200}
+                        step={1}
+                        onChange={(value) => updateSettings({ padding: value })}
+                        ariaLabel='Canvas Padding'
+                      />
+                    )}
+                  </ControlRow>
 
-              <ControlRow
-                label='Outline'
-                theme={theme}
-                currentValue={strokeWidth === 0 ? 'None' : `${strokeWidth}px`}
-              >
-                {editingStrokeWidth ? (
-                  <EditableValue
+                  <ControlRow
+                    label='Outline'
                     theme={theme}
-                    value={strokeWidthValue}
-                    onChange={handleStrokeWidthChange}
-                    onSubmit={submitStrokeWidth}
-                    onEditClick={() => setEditingStrokeWidth(true)}
-                    inputProps={{ min: '0', max: '5', step: '0.5' }}
-                    ariaLabel='Custom Stroke Width'
-                  />
-                ) : (
-                  <SliderControl
-                    theme={theme}
-                    currentValue={strokeWidth}
-                    min={0}
-                    max={5}
-                    step={0.5}
-                    onChange={(value) => updateSettings({ strokeWidth: value })}
-                    ariaLabel='Stroke Width'
-                  />
-                )}
-              </ControlRow>
+                    currentValue={strokeWidth === 0 ? 'None' : `${strokeWidth}px`}
+                  >
+                    {editingStrokeWidth ? (
+                      <EditableValue
+                        theme={theme}
+                        value={strokeWidthValue}
+                        onChange={handleStrokeWidthChange}
+                        onSubmit={submitStrokeWidth}
+                        onEditClick={() => setEditingStrokeWidth(true)}
+                        inputProps={{ min: '0', max: '5', step: '0.5' }}
+                        ariaLabel='Custom Stroke Width'
+                      />
+                    ) : (
+                      <SliderControl
+                        theme={theme}
+                        currentValue={strokeWidth}
+                        min={0}
+                        max={5}
+                        step={0.5}
+                        onChange={(value) => updateSettings({ strokeWidth: value })}
+                        ariaLabel='Stroke Width'
+                      />
+                    )}
+                  </ControlRow>
 
-              <ControlRow label='Hover Scale' theme={theme} currentValue={`${hoverScale}x`}>
-                {editingHoverScale ? (
-                  <EditableValue
-                    theme={theme}
-                    value={hoverScaleValue}
-                    onChange={handleHoverScaleChange}
-                    onSubmit={submitHoverScale}
-                    onEditClick={() => setEditingHoverScale(true)}
-                    inputProps={{ min: '1', max: '3', step: '0.1' }}
-                    ariaLabel='Custom Hover Scale'
-                  />
-                ) : (
-                  <SliderControl
-                    theme={theme}
-                    currentValue={hoverScale}
-                    min={1}
-                    max={3}
-                    step={0.1}
-                    onChange={(value) => updateSettings({ hoverScale: value })}
-                    ariaLabel='Hover Scale Factor'
-                  />
-                )}
-              </ControlRow>
+                  <ControlRow label='Hover Scale' theme={theme} currentValue={`${hoverScale}x`}>
+                    {editingHoverScale ? (
+                      <EditableValue
+                        theme={theme}
+                        value={hoverScaleValue}
+                        onChange={handleHoverScaleChange}
+                        onSubmit={submitHoverScale}
+                        onEditClick={() => setEditingHoverScale(true)}
+                        inputProps={{ min: '1', max: '3', step: '0.1' }}
+                        ariaLabel='Custom Hover Scale'
+                      />
+                    ) : (
+                      <SliderControl
+                        theme={theme}
+                        currentValue={hoverScale}
+                        min={1}
+                        max={3}
+                        step={0.1}
+                        onChange={(value) => updateSettings({ hoverScale: value })}
+                        ariaLabel='Hover Scale Factor'
+                      />
+                    )}
+                  </ControlRow>
+                </>
+              )}
             </CollapsibleSection>
 
             {/* Display Options Section */}
@@ -817,14 +861,6 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
                 ariaLabel={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
               />
 
-              <SwitchControl
-                theme={theme}
-                isChecked={animationsEnabled}
-                onCheckedChange={(enabled) => updateSettings({ animationsEnabled: enabled })}
-                label='Animations'
-                ariaLabel={`${animationsEnabled ? 'Disable' : 'Enable'} animations`}
-              />
-
               {/* Random Color Animation Toggle - only show in block mode */}
               {mode === 'block' && onRandomColorAnimationChange && (
                 <SwitchControl
@@ -836,21 +872,16 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
                 />
               )}
 
-              <SwitchControl
-                theme={theme}
-                isChecked={magneticEffect}
-                onCheckedChange={(enabled) => updateSettings({ magneticEffect: enabled })}
-                label='Magnetic Effect'
-                ariaLabel={`${magneticEffect ? 'Disable' : 'Enable'} magnetic effect`}
-              />
-
-              <DropdownControl
-                theme={theme}
-                currentValue={renderMode}
-                onValueChange={(mode) => updateSettings({ renderMode: mode })}
-                label='Render Mode'
-                ariaLabel='Select render mode'
-              />
+              {/* Only show render mode in node mode */}
+              {mode === 'node' && (
+                <DropdownControl
+                  theme={theme}
+                  currentValue={renderMode}
+                  onValueChange={(mode) => updateSettings({ renderMode: mode })}
+                  label='Render Mode'
+                  ariaLabel='Select render mode'
+                />
+              )}
 
               {/* Fill Percentage - only show in block mode */}
               {mode === 'block' && (
@@ -867,10 +898,46 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
                 </ControlRow>
               )}
             </CollapsibleSection>
-          </div>
-        </SheetContent>
-      </Sheet>
-    </>
+    </div>
+  );
+
+  // Mobile: Use Drawer for better swipe gestures
+  if (isMobile) {
+    return (
+      <Drawer open={sheetOpen} onOpenChange={setSheetOpen}>
+        <DrawerTrigger asChild>
+          {settingsButton}
+        </DrawerTrigger>
+        <DrawerContent className={`h-[66vh] backdrop-blur-2xl ${
+          theme === 'light'
+            ? 'border-t border-black/10'
+            : 'border-t border-white/10'
+        }`}>
+          <DrawerHeader />
+          {settingsContent}
+        </DrawerContent>
+      </Drawer>
+    );
+  }
+
+  // Desktop: Use Sheet
+  return (
+    <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
+      <SheetTrigger asChild>
+        {settingsButton}
+      </SheetTrigger>
+      <SheetContent
+        side='left'
+        className={`w-full sm:w-96 md:w-80 p-0 backdrop-blur-2xl ${
+          theme === 'light'
+            ? 'border-r border-black/10 text-black'
+            : 'border-r border-white/10 text-white'
+        }`}
+      >
+        <SheetHeader className='p-4'></SheetHeader>
+        {settingsContent}
+      </SheetContent>
+    </Sheet>
   );
 };
 
