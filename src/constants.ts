@@ -106,6 +106,6 @@ export const BLOCK_MODE_CONFIG = {
   lightModeGlowFactor: 1,
   darkModeGlowFactor: 1.1,
   fillPercentage: 100, // Default to all circles enabled
-  blockCount: 3, // Default to 3 blocks for 3D mode
+  blockCount: 1, // Default to 1 block for 3D mode
   autoRotateCamera: true // Default to auto-rotation enabled
 };
