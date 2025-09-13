@@ -4,7 +4,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Dual-mode interactive visualization app featuring both 2D (P5.js) and 3D (Three.js) rendering. Built with React 19, TypeScript 5.7, and Vite 6, it provides responsive grid animations with spring physics, touch/mouse interaction, and full PWA capabilities.
+**Networks** - A collective art experience building digital 2D nodes and 3D block sculptures inspired by Ethereum.
+
+Interactive visualization app featuring:
+- **2D Mode (Node)**: 5×5 grid with P5.js rendering, interactive color editing
+- **3D Mode (Block)**: 25×25 grid forming rotating cube sculpture with Three.js
+- Spring physics animations, touch/mouse interactions, PWA capabilities
+- Built with React 19, TypeScript 5.7, Vite 6
+
+Live site: https://networks-henna.vercel.app/
 
 ## Commands
 
@@ -20,112 +28,130 @@ pnpm preview         # Preview production build locally
 pnpm lint            # Run ESLint checks
 ```
 
+**Important**: Uses pnpm (not npm) as package manager
+
 ## Architecture
 
-### Dual-Mode Rendering Architecture
+### Mode System & Entry Point
 
-The app implements a sophisticated conditional rendering system supporting both 2D (P5.js) and 3D (Three.js) modes:
-- **Automatic Mode Detection**: Switches to 3D when BLOCK_MODE_CONFIG (25x25 grid) is selected
-- **Unified Data Model**: Both modes consume the same `customGridColors` array for consistency
-- **Conditional Rendering**: CanvasVisualization.tsx orchestrates mode switching
-- **Shared Physics System**: Both modes use identical spring physics (stiffness: 0.15-0.25, damping: 0.65-0.75)
+**CanvasVisualization** (`src/components/CanvasVisualization.tsx`): Main orchestrator
+- Controls mode switching between 2D "node" (5×5) and 3D "block" (25×25)
+- Manages header layout: Settings + Mode toggle (left), Edit controls (right)
+- Handles palette selection and color grid generation
+- URL query parameter sync (`?mode=node|block&palette=...`)
 
-### Core Components
+### 2D Rendering System (P5.js)
 
-**TwoDimensionalCanvas** (`src/2d/components/TwoDimensionalCanvas.tsx`): Main 2D canvas orchestrator
-- Manages grid of CircleEntity instances
-- Handles mouse/touch interactions via InteractionHandler class
-- Image upload for custom color palettes
-- Mask mode for shape-based grids
-- Edit mode support with color painting and dragging
-- Distance-based rendering sorting for proper z-index
+**TwoDimensionalCanvas** (`src/2d/components/TwoDimensionalCanvas.tsx`)
+- Manages grid of CircleEntity instances with spring physics
+- InteractionHandler class for centralized mouse/touch events
+- Edit mode with drag-painting using `paintedCellsRef` Set
+- Distance-based z-index sorting for proper layering
+- Image upload for custom palette generation via mask mode
 
-**CircleEntity** (`src/2d/entities/CircleEntity.ts`): Self-contained entity with encapsulated behavior
-- Multi-phase animations: shrink (200ms) → pause (100ms) → bounce (spring physics)
-- Render strategies: circle, emoji, dollar sign modes
-- Spring physics properties: velocityX/Y, magneticEffect for cursor attraction
-- Hover states with dynamic glow effects
-- Color fade transitions with configurable duration
-- Distance-based interaction zones
+**CircleEntity** (`src/2d/entities/CircleEntity.ts`)
+- Multi-phase animation: shrink (200ms) → pause (100ms) → bounce
+- Spring physics: stiffness 0.15-0.25, damping 0.65-0.75
+- Render modes: circle, emoji ($), dollar sign strategies
+- Magnetic cursor attraction with distance-based zones
 
-**ThreeDimensionalCanvas** (`src/3d/components/ThreeDimensionalCanvas.tsx`): Three.js scene management
-- React Three Fiber integration with @react-three/drei helpers
-- Cube face population: 6 faces × gridSize² circles with edge deduplication
-- Orbital controls with auto-rotation
-- Environmental effects: starfield (500 stars), fog, ambient/directional lighting
-- Circle3D entities sharing the same spring physics as 2D mode
+### 3D Rendering System (Three.js)
 
-### State Management Architecture
+**ThreeDimensionalCanvas** (`src/3d/components/ThreeDimensionalCanvas.tsx`)
+- React Three Fiber + Drei for declarative 3D
+- Cube with 6 faces × gridSize² circles, edge deduplication
+- Auto-rotating orbital controls
+- Environmental: 500-star field, fog, ambient/directional lighting
+- Circle3D entities share physics constants with 2D mode
 
-**CanvasSettingsContext** (`src/contexts/CanvasSettingsContext.tsx`): Centralized configuration
-- Immutable state updates with spread operator pattern
-- Type-safe `CanvasSettings` interface
-- Consumed by both 2D and 3D canvas components
-- Settings include: gridSize, fadeDuration, padding, colorPalette, renderMode, etc.
+### State Management
 
-### Performance-Optimized State Patterns
+**CanvasSettingsContext** (`src/contexts/CanvasSettingsContext.tsx`)
+- Central configuration for both 2D/3D modes
+- Immutable updates via spread operator
+- Settings: gridSize, padding, renderMode, fillPercentage, etc.
 
-**Ref-Heavy Architecture**: Prevents re-renders during animations
-```typescript
-const settingsRef = useRef(settings);  // Avoids animation disruption
-const p5InstanceRef = useRef(p5Instance);  // Stable P5.js reference
-```
+**Performance Patterns**:
+- Heavy ref usage to prevent animation re-renders
+- `settingsRef` for stable animation references
+- `p5InstanceRef` for P5.js instance stability
 
-**Predefined Configurations**:
-- `NODE_MODE_CONFIG`: 5×5 grid for node visualization
+### Component Systems
+
+**UI Controls**:
+- **EditModeControls**: Color palette selector (right-aligned dropdown), save/edit toggle
+- **ControlPanel**: Settings sheet (left slide-in), dimension selector, display options
+- **ModeTabs**: Node/Block mode switcher
+- **PaletteSelector**: 17 predefined palettes + random generation
+
+**UI Components** (`src/components/ui/`):
+- Shadcn/ui components: button, drawer, select, sheet, slider, switch, tabs
+- All dropdowns use `align="end"` to prevent off-screen rendering
+
+### Configuration & Constants
+
+**Predefined Modes** (`src/constants/modeConfig.ts`):
+- `NODE_MODE_CONFIG`: 5×5 grid for 2D visualization
 - `BLOCK_MODE_CONFIG`: 25×25 grid triggering 3D mode
+- `NODE_DIMENSIONS`: Includes rectangular options (5×10, 10×5)
+- `CUBE_DIMENSIONS`: Square-only for 3D cube faces
 
-**Custom Hooks**:
-- `useCanvasEffects`: Manages resize, regeneration, and property updates
-- `useQueryParams`: URL state synchronization
-- `useColorAnimation`: Animation timing control
+**Color System** (`src/constants/palettes.ts`):
+- 17 themed palettes: rainbow, neon, cyberpunk, miami, etc.
+- Random palette generation with HSL color space
 
-### Styling Architecture
+### Technical Stack
 
-- Tailwind CSS v4 with Vite plugin
-- Shadcn/ui components in `src/components/ui/`
-- Theme provider with light/dark mode support
+**Build & Tooling**:
+- Vite 6 with PWA plugin (3MB cache, auto-update)
+- Tailwind CSS v4 with Vite plugin integration
+- TypeScript 5.7 with path aliasing (`@/*` → `./src/*`)
+- ESLint 9 with React hooks plugin
+
+**Key Dependencies**:
+- React 19 + React DOM 19
+- P5.js via react-p5 wrapper
+- Three.js with React Three Fiber + Drei
 - Framer Motion for UI animations
-- Three.js for 3D rendering with React Three Fiber and Drei helpers
+- React Router DOM for URL state
+- Radix UI primitives for accessible components
 
-### PWA Features
+## Critical Implementation Details
 
-Configured via `vite-plugin-pwa` with:
-- Service worker auto-update with user confirmation
-- Offline capability
-- Standalone app manifest
-- 3MB cache limit
+### Animation Performance
+- **Never trigger re-renders during animations** - use refs for animation state
+- 60fps target requires careful state management
+- Distance calculations cached per frame
 
-## Key Patterns
+### Touch/Mouse Handling
+- Centralized through InteractionHandler class
+- Fallback timeouts for unreliable touchend events
+- Unified cursor position tracking for both 2D/3D
 
-1. **Entity-Component Pattern**: Self-contained entities (CircleEntity, Circle3D) with encapsulated physics and rendering
-2. **Ref-Based Performance**: Strategic ref usage prevents re-renders during 60fps animations
-3. **Distance-Based Rendering**: Dynamic z-index sorting based on cursor proximity for proper layering
-4. **Drag Painting**: Edit mode with `paintedCellsRef` Set to prevent duplicate color applications
-5. **Theme-Aware Canvas**: Background colors adapt to theme (light: 255, dark: 10)
-6. **Unified Spring Physics**: Shared physics constants across 2D/3D for consistent feel
-7. **Multi-Phase Animations**: Shrink → Pause → Bounce sequence with precise timing
-8. **Touch Event Resilience**: Fallback timeouts handle unreliable touchend events
-9. **Mode Strategy Pattern**: Render modes (circle/emoji/dollar) with pluggable strategies
-10. **Configuration-Driven**: Mode switching via configuration objects rather than imperative code
+### Theme System
+- Canvas backgrounds: light mode (255), dark mode (10)
+- All UI components theme-aware via context
+- Smooth transitions with Tailwind classes
 
-## Important Files & Configuration
+### Edit Mode Features
+- Drag to paint multiple cells with selected color
+- `paintedCellsRef` Set prevents duplicate applications
+- Color changes persist across mode switches
 
-- **Vite Config** (`vite.config.ts`): PWA setup, Tailwind CSS v4, path aliasing, ngrok support, 2.5MB chunk limit
-- **Color Constants** (`src/constants/palettes.ts`): 17 predefined color palettes
-- **Mode Configs** (`src/constants/modeConfig.ts`): NODE_MODE_CONFIG and BLOCK_MODE_CONFIG definitions
-- **UI Components** (`src/components/ui/`): Shadcn/ui components (button, drawer, dropdown-menu, select, sheet, slider, switch, tabs)
-- **Edit Components**: EditModeControls, PaletteSelector for grid customization
-- **Interaction Handler** (`src/2d/handlers/InteractionHandler.ts`): Centralized mouse/touch event handling
-- **Spring Physics** (`src/utils/springPhysics.ts`): Shared physics system for 2D/3D entities
-- **Canvas Visualization** (`src/components/CanvasVisualization.tsx`): Mode switching and palette management
+### PWA Requirements
+- Icons at `public/pwa-192x192.png` and `public/pwa-512x512.png`
+- Service worker with 3MB limit
+- Manifest for standalone app mode
+- Offline capability via workbox
+
+### URL State Management
+- Query params: `?mode=node|block&palette=rainbow&hideControls=true`
+- Bidirectional sync with component state
+- Shareable configurations
 
 ## Development Notes
 
-- **Package Manager**: Uses pnpm (not npm)
+- **Mobile Support**: Ngrok enabled in Vite config for device testing
 - **No Test Suite**: Testing infrastructure not configured
-- **Mobile Development**: Ngrok support via Vite's allowedHosts configuration
-- **PWA Requirements**: Icons needed at public/pwa-192x192.png and public/pwa-512x512.png
-- **Service Worker**: 3MB cache limit with auto-update prompt
-- **Mode Detection Logic**: Checks gridSize + animationsEnabled + colorPalette to determine 2D vs 3D
-- **Performance Critical**: Avoid triggering re-renders during animations - use refs for animation state
+- **Vercel Deployment**: Automatic deploys from main branch
+- **Bundle Splitting**: 2.5MB chunk limit configured

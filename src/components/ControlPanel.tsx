@@ -312,7 +312,10 @@ const DropdownControl: React.FC<DropdownControlProps> = ({
         <SelectContent 
           className={getContentClass()}
           position="popper"
+          side="bottom"
+          align="end"
           sideOffset={5}
+          alignOffset={-5}
         >
           {Object.entries(renderModes).map(([key, name]) => (
             <SelectItem 
@@ -392,7 +395,10 @@ const PaletteDropdownControl: React.FC<PaletteDropdownControlProps> = ({
         <SelectContent 
           className={getContentClass()}
           position="popper"
+          side="bottom"
+          align="end"
           sideOffset={5}
+          alignOffset={-5}
         >
           {Object.entries(paletteNames).map(([key, name]) => (
             <SelectItem 

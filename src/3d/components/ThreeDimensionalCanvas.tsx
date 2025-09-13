@@ -541,42 +541,6 @@ const ThreeDimensionalCanvas: React.FC<ThreeDimensionalCanvasProps> = ({
             onSceneReady={handleSceneReady}
           />
         </Canvas>
-        
-        {/* Legend with camera controls - positioned at bottom left */}
-        <div className="absolute bottom-4 left-4 bg-background/80 backdrop-blur-sm rounded-lg p-2 shadow-lg border">
-          <div className="flex items-center gap-1">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handlePreviousFace}
-              disabled={isAnimating}
-              className="h-8 w-8"
-              title="Previous face"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleResetCamera}
-              disabled={isAnimating}
-              className="h-8 w-8"
-              title="Reset to default view"
-            >
-              <RotateCcw className={`h-4 w-4 ${isAnimating && currentFaceIndex === 0 ? 'animate-spin' : ''}`} />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleNextFace}
-              disabled={isAnimating}
-              className="h-8 w-8"
-              title="Next face"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
       </div>
     </div>
   );

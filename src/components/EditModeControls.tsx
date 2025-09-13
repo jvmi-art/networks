@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Shuffle, Brush, Save } from 'lucide-react';
+import { Shuffle, Brush, Save } from 'lucide-react';
 import { useTheme } from '../theme/theme-provider';
 
 interface EditModeControlsProps {
@@ -11,6 +11,7 @@ interface EditModeControlsProps {
   isEditMode: boolean;
   onEditModeChange: (isEditMode: boolean) => void;
   onRandomize?: () => void;
+  paletteColors?: string[];
 }
 
 // Default chromatic colors
@@ -26,12 +27,11 @@ const EditModeControls: React.FC<EditModeControlsProps> = ({
   onColorSelect,
   isEditMode,
   onEditModeChange,
-  onRandomize
+  onRandomize,
+  paletteColors
 }) => {
   const { theme } = useTheme();
-  const [colors, setColors] = React.useState<string[]>(defaultColors);
-  const [showColorInput, setShowColorInput] = React.useState(false);
-  const [newColorInput, setNewColorInput] = React.useState('');
+  const colors = paletteColors || defaultColors;
 
   return (
     <div className="relative">
@@ -102,79 +102,6 @@ const EditModeControls: React.FC<EditModeControlsProps> = ({
                   whileTap={{ scale: 0.95 }}
                 />
               ))}
-            </div>
-
-            {/* Add Custom Color */}
-            <div className="relative">
-              <button
-                className={`p-1.5 rounded-full ${
-                  theme === 'light'
-                    ? 'hover:bg-gray-100'
-                    : 'hover:bg-white/10'
-                } transition-colors`}
-                onClick={() => setShowColorInput(!showColorInput)}
-              >
-                <Plus className="w-4 h-4" />
-              </button>
-
-              {/* Color Input Dropdown */}
-              <AnimatePresence>
-                {showColorInput && (
-                  <motion.div
-                    className={`absolute top-full mt-2 right-0 rounded-lg p-3 ${
-                      theme === 'light'
-                        ? 'bg-white border border-gray-200 shadow-lg'
-                        : 'bg-black border border-white/10 shadow-lg'
-                    } backdrop-blur-md z-50 min-w-[200px]`}
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                  >
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        value={newColorInput}
-                        onChange={(e) => setNewColorInput(e.target.value)}
-                        placeholder="#FF0000"
-                        className={`flex-1 px-2 py-1 text-sm rounded border ${
-                          theme === 'light'
-                            ? 'bg-white border-gray-300 text-gray-900'
-                            : 'bg-gray-800 border-gray-600 text-white'
-                        }`}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            const color = newColorInput.startsWith('#') ? newColorInput : `#${newColorInput}`;
-                            if (/^#[0-9A-F]{6}$/i.test(color)) {
-                              setColors(prev => [...prev, color]);
-                              setNewColorInput('');
-                              setShowColorInput(false);
-                              onColorSelect(color);
-                            }
-                          }
-                        }}
-                      />
-                      <button
-                        className={`px-2 py-1 text-xs rounded ${
-                          theme === 'light'
-                            ? 'bg-blue-500 text-white hover:bg-blue-600'
-                            : 'bg-blue-600 text-white hover:bg-blue-700'
-                        } transition-colors`}
-                        onClick={() => {
-                          const color = newColorInput.startsWith('#') ? newColorInput : `#${newColorInput}`;
-                          if (/^#[0-9A-F]{6}$/i.test(color)) {
-                            setColors(prev => [...prev, color]);
-                            setNewColorInput('');
-                            setShowColorInput(false);
-                            onColorSelect(color);
-                          }
-                        }}
-                      >
-                        Add
-                      </button>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
             </div>
 
             {/* Randomize Button */}

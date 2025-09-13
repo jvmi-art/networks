@@ -7,21 +7,12 @@ import '../../App.css';
 import { CircleEntity } from '../entities/CircleEntity';
 import { calculateGridSpacing, getCirclePositionByRowCol } from '../../utils/gridCalculator';
 import { InteractionHandler } from '../handlers/InteractionHandler';
-import ImageUploader from './ImageUploader';
 import {
   useCanvasResize,
   useGridRegeneration,
   useVisualPropertyUpdates
 } from '../../hooks/useCanvasEffects';
 
-import {
-  Drawer,
-  DrawerContent,
-  DrawerTrigger,
-  DrawerHeader,
-  DrawerTitle,
-  DrawerDescription
-} from '../../components/ui/drawer';
 import { Button } from '../../components/ui/button';
 import { generateColorGrid } from '../../constants';
 import { chromaticPalette } from '../../palettes';
@@ -68,10 +59,10 @@ const TwoDimensionalCanvas: React.FC<TwoDimensionalCanvasProps> = ({
   //------------------------------------------
   const [circles, setCircles] = useState<CircleEntity[]>([]);
   const [p5Instance, setP5Instance] = useState<p5Types | null>(null);
-  const [showImageUploader, setShowImageUploader] = useState<boolean>(false);
   const [customPalette, setCustomPalette] = useState<string[] | null>(null);
-  const [isMaskMode, setIsMaskMode] = useState<boolean>(false);
   const [, setMaskData] = useState<{ [key: string]: boolean } | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isProcessingImage, setIsProcessingImage] = useState(false);
 
   // Interaction handler
   const interactionHandlerRef = useRef<InteractionHandler | null>(null);
@@ -130,6 +121,9 @@ const TwoDimensionalCanvas: React.FC<TwoDimensionalCanvasProps> = ({
     // Reset the color index grid so we can rebuild it with the new colors
     colorGridRef.current = {};
 
+    // Stop processing
+    setIsProcessingImage(false);
+
     // Regenerate the circles with the new colors
     if (p5Instance) {
       const newCircles = setupGrid(p5Instance, uniqueColors, colorGrid);
@@ -140,32 +134,6 @@ const TwoDimensionalCanvas: React.FC<TwoDimensionalCanvasProps> = ({
     }
   };
 
-  /**
-   * Toggle mask mode
-   */
-  const handleMaskModeToggle = (enabled: boolean) => {
-    setIsMaskMode(enabled);
-
-    // Reset mask data and custom grid when toggling off mask mode
-    if (!enabled) {
-      setMaskData(null);
-      if (customColorGridRef.current && customPalette && p5Instance) {
-        // Regenerate with standard grid if we have a custom palette
-        const newCircles = setupGrid(p5Instance, customPalette, customColorGridRef.current);
-        setCircles(newCircles);
-
-        // Update interaction handler with new circles
-        updateInteractionHandler(newCircles);
-      } else if (p5Instance) {
-        // Otherwise regenerate with default grid
-        const newCircles = setupGrid(p5Instance);
-        setCircles(newCircles);
-
-        // Update interaction handler with new circles
-        updateInteractionHandler(newCircles);
-      }
-    }
-  };
 
   /**
    * Handle mask data from the ImageUploader
@@ -182,6 +150,59 @@ const TwoDimensionalCanvas: React.FC<TwoDimensionalCanvasProps> = ({
       // Update interaction handler with new circles
       updateInteractionHandler(newCircles);
     }
+  };
+
+  /**
+   * Handle direct image upload from camera button
+   */
+  const handleDirectImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !file.type.startsWith('image/')) return;
+
+    setIsProcessingImage(true);
+    const fileUrl = URL.createObjectURL(file);
+    
+    const img = new Image();
+    img.onload = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        if (!ctx) {
+          setIsProcessingImage(false);
+          return;
+        }
+
+        canvas.width = img.width;
+        canvas.height = img.height;
+        ctx.drawImage(img, 0, 0);
+
+        // Import the image processor functions
+        import('../../utils/imageProcessor').then(({ processImageFromCanvas }) => {
+          const colorGrid = processImageFromCanvas(ctx, img, settings.gridSize, settings.gridSize);
+          handlePixelDataReady(colorGrid);
+        }).catch(err => {
+          console.error('Error importing image processor:', err);
+          setIsProcessingImage(false);
+        });
+      } catch (err) {
+        console.error('Error processing image:', err);
+        setIsProcessingImage(false);
+      } finally {
+        URL.revokeObjectURL(fileUrl);
+      }
+    };
+
+    img.onerror = () => {
+      console.error('Failed to load image');
+      setIsProcessingImage(false);
+      URL.revokeObjectURL(fileUrl);
+    };
+
+    img.src = fileUrl;
+    
+    // Reset the input value to allow selecting the same file again
+    event.target.value = '';
   };
 
   //------------------------------------------
@@ -742,43 +763,32 @@ const TwoDimensionalCanvas: React.FC<TwoDimensionalCanvasProps> = ({
       </div>
 
       {!hideControls && (
-        <Drawer open={showImageUploader} onOpenChange={setShowImageUploader}>
-          <DrawerTrigger asChild>
-            <Button
-              variant='outline'
-              className='fixed bottom-[28px] right-[28px] rounded-full w-16 h-16 p-0'
-              role='toggle-image-uploader'
-            >
-              <RiCameraFill size={40} className='size-6 text-muted-foreground' />
-            </Button>
-          </DrawerTrigger>
-
-          <DrawerContent
-            className={`${
-              theme === 'light'
-                ? 'bg-white/95 border-black/20 text-black'
-                : 'bg-black/95 border-white/20 text-white'
-            } backdrop-blur-lg`}
+        <>
+          <input
+            ref={fileInputRef}
+            type='file'
+            accept='image/*'
+            className='hidden'
+            onChange={handleDirectImageUpload}
+          />
+          <Button
+            variant='outline'
+            className={`fixed bottom-[28px] right-[28px] rounded-full w-16 h-16 p-0 ${
+              isProcessingImage ? 'animate-pulse' : ''
+            }`}
+            role='upload-image'
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isProcessingImage}
           >
-            <DrawerHeader className='sr-only'>
-              <DrawerTitle>Upload Image</DrawerTitle>
-              <DrawerDescription>
-                Upload an image to extract colors or create a mask for your grid
-              </DrawerDescription>
-            </DrawerHeader>
-            <div className='px-4 pb-4 max-w-full'>
-              <div className='max-w-lg mx-auto'>
-                <ImageUploader
-                  gridSize={settings.gridSize}
-                  onPixelDataReady={handlePixelDataReady}
-                  onMaskDataReady={handleMaskDataReady}
-                  isMaskMode={isMaskMode}
-                  onMaskModeToggle={handleMaskModeToggle}
-                />
+            {isProcessingImage ? (
+              <div className='animate-spin'>
+                <RiCameraFill size={40} className='size-6 text-muted-foreground' />
               </div>
-            </div>
-          </DrawerContent>
-        </Drawer>
+            ) : (
+              <RiCameraFill size={40} className='size-6 text-muted-foreground' />
+            )}
+          </Button>
+        </>
       )}
     </>
   );

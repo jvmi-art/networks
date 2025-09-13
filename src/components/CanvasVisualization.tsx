@@ -92,7 +92,7 @@ function CanvasVisualization() {
   return (
     <div
       className={`w-screen h-screen flex flex-col overflow-hidden ${
-        hideControls ? '' : theme === 'light' ? 'bg-[#eeeeee]' : 'bg-[#101010]'
+        hideControls ? '' : theme === 'light' ? 'bg-white' : 'bg-[#0a0a0a]'
       } transition-colors duration-300 ease-in-out`}
       style={backgroundStyle}
     >
@@ -100,10 +100,19 @@ function CanvasVisualization() {
       {!hideControls && (
         <header className='fixed top-0 left-0 right-0 z-[49] p-2 sm:p-4'>
           <div className='flex items-center justify-between'>
-            {/* Left side - empty for now */}
-            <div></div>
+            {/* Left side - Settings and mode toggle */}
+            <div className='flex items-center gap-2'>
+              <ControlPanel 
+                mode={activeMode} 
+                selectedPalette={selectedPalette}
+                onPaletteChange={(palette) => setSelectedPalette(palette as PaletteType)}
+                randomColorAnimation={randomColorAnimation}
+                onRandomColorAnimationChange={setRandomColorAnimation}
+              />
+              <ModeTabs activeTab={activeMode} onTabChange={setActiveMode} />
+            </div>
 
-            {/* Right side controls container */}
+            {/* Right side - Edit Mode Controls */}
             <div className='flex items-center gap-2'>
               {/* Edit Mode Controls - only show in node mode */}
               {activeMode === 'node' && (
@@ -113,16 +122,13 @@ function CanvasVisualization() {
                   isEditMode={isEditMode}
                   onEditModeChange={setIsEditMode}
                   onRandomize={handleRandomize}
+                  paletteColors={
+                    Array.isArray(palettes[selectedPalette]) 
+                      ? palettes[selectedPalette] as string[]
+                      : undefined
+                  }
                 />
               )}
-              <ModeTabs activeTab={activeMode} onTabChange={setActiveMode} />
-              <ControlPanel 
-                mode={activeMode} 
-                selectedPalette={selectedPalette}
-                onPaletteChange={setSelectedPalette}
-                randomColorAnimation={randomColorAnimation}
-                onRandomColorAnimationChange={setRandomColorAnimation}
-              />
             </div>
           </div>
         </header>
