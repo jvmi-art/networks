@@ -81,7 +81,9 @@ export const NODE_MODE_CONFIG = {
   animationsEnabled: false,
   lightModeGlowFactor: 1.1,
   darkModeGlowFactor: 1.2,
-  fillPercentage: 100 // Default to all circles enabled
+  fillPercentage: 100, // Default to all circles enabled
+  blockCount: 1, // Default to single block
+  autoRotateCamera: true // Default to auto-rotation enabled
 };
 
 export const BLOCK_MODE_CONFIG = {
@@ -103,5 +105,7 @@ export const BLOCK_MODE_CONFIG = {
   animationsEnabled: true,
   lightModeGlowFactor: 1,
   darkModeGlowFactor: 1.1,
-  fillPercentage: 100 // Default to all circles enabled
+  fillPercentage: 100, // Default to all circles enabled
+  blockCount: 3, // Default to 3 blocks for 3D mode
+  autoRotateCamera: true // Default to auto-rotation enabled
 };

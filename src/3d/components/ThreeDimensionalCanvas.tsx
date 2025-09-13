@@ -32,7 +32,10 @@ const ThreeDimensionalCanvas: React.FC<ThreeDimensionalCanvasProps> = ({
 }) => {
   const { settings } = useCanvasSettings();
   const { theme } = useTheme();
-  const [circles, setCircles] = useState<Circle3D[]>([]);
+  const blockCount = settings.blockCount || 3;
+  const [cubeCircles, setCubeCircles] = useState<Circle3D[][]>(() => 
+    Array(blockCount).fill(null).map(() => [])
+  );
   const [cubeChunkPattern, setCubeChunkPattern] = useState<boolean[][][]>([]);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const orbitControlsRef = useRef<any>(null);
@@ -53,7 +56,7 @@ const ThreeDimensionalCanvas: React.FC<ThreeDimensionalCanvasProps> = ({
     setCubeChunkPattern(patterns);
   }, [settings.fillPercentage, settings.gridSize, settings.gridWidth, settings.gridHeight]);
 
-  // Generate circles for all 6 faces of the cube following the curved surface
+  // Generate circles for all 6 faces of a single cube following the curved surface
   const generateCubeCircles = useCallback(() => {
     const newCircles: Circle3D[] = [];
     const positionMap = new Map<string, Circle3D>();
@@ -237,22 +240,30 @@ const ThreeDimensionalCanvas: React.FC<ThreeDimensionalCanvasProps> = ({
     cubeChunkPattern
   ]);
 
-  // Initialize circles immediately for rendering
+  // Initialize circles for all cubes based on blockCount
   React.useEffect(() => {
-    const newCircles = generateCubeCircles();
-    setCircles(newCircles);
+    const allCubeCircles: Circle3D[][] = [];
+    
+    // Generate circles for each cube
+    for (let i = 0; i < blockCount; i++) {
+      const circles = generateCubeCircles();
+      allCubeCircles.push(circles);
+    }
+    
+    setCubeCircles(allCubeCircles);
     setSceneInitialized(true);
     
-    // If this is not the first load (e.g., when switching sizes via tabs),
-    // trigger animations immediately without loading screen
+    // If this is not the first load, trigger animations immediately
     if (!isFirstLoad.current) {
       setTimeout(() => {
-        newCircles.forEach(circle => {
-          circle.triggerAnimation();
+        allCubeCircles.forEach(circles => {
+          circles.forEach(circle => {
+            circle.triggerAnimation();
+          });
         });
-      }, 100); // Small delay to ensure render
+      }, 100);
     }
-  }, [generateCubeCircles]);
+  }, [generateCubeCircles, blockCount]);
   
   // Handle scene ready callback from Cube component
   const handleSceneReady = useCallback(() => {
@@ -288,8 +299,10 @@ const ThreeDimensionalCanvas: React.FC<ThreeDimensionalCanvasProps> = ({
         // Trigger circles early (while panels are still sliding)
         const circleDelay = Math.max(0, LOADING_CONFIG.panelSplitTime + LOADING_CONFIG.circleAnimationDelay);
         setTimeout(() => {
-          circles.forEach(circle => {
-            circle.triggerAnimation();
+          cubeCircles.forEach(circles => {
+            circles.forEach(circle => {
+              circle.triggerAnimation();
+            });
           });
         }, circleDelay);
         
@@ -301,11 +314,12 @@ const ThreeDimensionalCanvas: React.FC<ThreeDimensionalCanvasProps> = ({
         }, LOADING_CONFIG.panelSplitTime);
       }, LOADING_CONFIG.logoFadeTime);
     }, remainingTime);
-  }, [circles]);
+  }, [cubeCircles]);
 
   // Update circle enabled states when pattern or theme changes
   React.useEffect(() => {
-    circles.forEach((circle, index) => {
+    cubeCircles.forEach(circles => {
+      circles.forEach((circle, index) => {
       // Calculate which face, row, col this circle belongs to
       const gridWidth = settings.gridWidth || settings.gridSize;
       const gridHeight = settings.gridHeight || settings.gridSize;
@@ -331,13 +345,18 @@ const ThreeDimensionalCanvas: React.FC<ThreeDimensionalCanvasProps> = ({
           circle.triggerAnimation();
         }
       }
+      });
     });
-  }, [cubeChunkPattern, theme, circles, settings.gridSize, settings.gridWidth, settings.gridHeight]);
+  }, [cubeChunkPattern, theme, cubeCircles, settings.gridSize, settings.gridWidth, settings.gridHeight]);
 
-  // Use the color animation hook for cleaner implementation
+  // Use the color animation hook for all circles combined
   // For random palette, generate random colors on the fly
+  const allCircles = React.useMemo(() => {
+    return cubeCircles.flat();
+  }, [cubeCircles]);
+  
   useColorAnimation({
-    circles,
+    circles: allCircles,
     colorPalette: useRandomColors ? undefined : colorPalette,
     isAnimating: randomColorAnimation,
     transitionSpeed: 0.15,
@@ -346,25 +365,22 @@ const ThreeDimensionalCanvas: React.FC<ThreeDimensionalCanvasProps> = ({
 
   const backgroundColor = theme === 'light' ? '#ffffff' : '#000000';
 
-  // Calculate dynamic camera distance based on screen size
+  // Calculate dynamic camera distance based on screen size and block count
   const calculateCameraDistance = useCallback(() => {
     const minDimension = Math.min(window.innerWidth, window.innerHeight);
     const maxDimension = Math.max(window.innerWidth, window.innerHeight);
     
-    // Base distance that works well for most screens (closer for more zoom)
-    let baseDistance = 4;
+    // Base distance that scales with block count
+    // Formula: base + (blockCount - 1) * spacing factor
+    let baseDistance = 4 + (blockCount - 1) * 1.5;
     
     // Adjust for very small screens (mobile)
     if (minDimension < 600) {
-      baseDistance = 4.5;
+      baseDistance = baseDistance + 1;
     }
     // Adjust for tablets
     else if (minDimension < 1024) {
-      baseDistance = 4.2;
-    }
-    // Default for desktop
-    else {
-      baseDistance = 4;
+      baseDistance = baseDistance + 0.5;
     }
     
     // Further adjust based on aspect ratio
@@ -374,8 +390,11 @@ const ThreeDimensionalCanvas: React.FC<ThreeDimensionalCanvasProps> = ({
       baseDistance *= 1.15;
     }
     
+    // Cap maximum distance for better view
+    baseDistance = Math.min(baseDistance, 20);
+    
     return [baseDistance, baseDistance, baseDistance];
-  }, []);
+  }, [blockCount]);
 
   const [cameraPosition, setCameraPosition] = useState(() => calculateCameraDistance());
 
@@ -399,14 +418,14 @@ const ThreeDimensionalCanvas: React.FC<ThreeDimensionalCanvasProps> = ({
     // Small delay to ensure smooth transition
     requestAnimationFrame(() => {
       if (orbitControlsRef.current) {
-        // Keep auto-rotate disabled (cube rotates itself)
-        orbitControlsRef.current.autoRotate = false;
+        // Restore auto-rotate setting after animation
+        orbitControlsRef.current.autoRotate = settings.autoRotateCamera;
         orbitControlsRef.current.update();
       }
       setIsAnimating(false);
       setAnimationTarget(null);
     });
-  }, []);
+  }, [settings.autoRotateCamera]);
 
 
   return (
@@ -482,9 +501,9 @@ const ThreeDimensionalCanvas: React.FC<ThreeDimensionalCanvasProps> = ({
             ref={orbitControlsRef}
             enableZoom={true}
             enablePan={false}
-            minDistance={2.5}
-            maxDistance={10}
-            autoRotate={true}
+            minDistance={5}
+            maxDistance={20}
+            autoRotate={settings.autoRotateCamera}
             autoRotateSpeed={0.5}
             enableDamping={true}
             dampingFactor={0.05}
@@ -493,14 +512,30 @@ const ThreeDimensionalCanvas: React.FC<ThreeDimensionalCanvasProps> = ({
           <ambientLight intensity={theme === 'light' ? 1.0 : 0.6} />
           <directionalLight position={[10, 10, 5]} intensity={theme === 'light' ? 0.5 : 0.8} />
 
-          <Cube 
-            circles={circles} 
-            theme={theme}
-            orbitControlsRef={orbitControlsRef}
-            animationTarget={animationTarget}
-            onAnimationComplete={handleAnimationComplete}
-            onSceneReady={handleSceneReady}
-          />
+          {/* Render cubes with dynamic positioning */}
+          {cubeCircles.map((circles, index) => {
+            // Dynamic spacing based on block count
+            const spacing = blockCount === 1 ? 0 : Math.min(3.5, 12 / (blockCount - 1));
+            
+            // Center the cubes around origin
+            const totalWidth = (blockCount - 1) * spacing;
+            const xPosition = index * spacing - totalWidth / 2;
+            
+            return (
+              <Cube 
+                key={index}
+                circles={circles} 
+                theme={theme}
+                position={[xPosition, 0, 0]}
+                orbitControlsRef={orbitControlsRef}
+                animationTarget={animationTarget}
+                onAnimationComplete={handleAnimationComplete}
+                onSceneReady={index === 0 ? handleSceneReady : undefined}
+                index={index}
+                disableHover={blockCount > 1} // Disable hover when multiple blocks
+              />
+            );
+          })}
         </Canvas>
       </div>
     </div>

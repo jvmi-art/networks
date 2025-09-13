@@ -590,7 +590,9 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
     strokeWidth,
     hoverScale,
     renderMode,
-    fillPercentage
+    fillPercentage,
+    blockCount,
+    autoRotateCamera
   } = settings;
   const [sheetOpen, setSheetOpen] = useState<boolean>(false);
   const [isMobile, setIsMobile] = useState<boolean>(false);
@@ -878,6 +880,17 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
                 />
               )}
 
+              {/* Auto-rotate Camera Toggle - only show in block mode */}
+              {mode === 'block' && (
+                <SwitchControl
+                  theme={theme}
+                  isChecked={autoRotateCamera}
+                  onCheckedChange={(checked) => updateSettings({ autoRotateCamera: checked })}
+                  label='Auto-rotate Camera'
+                  ariaLabel={`${autoRotateCamera ? 'Disable' : 'Enable'} camera auto-rotation`}
+                />
+              )}
+
               {/* Only show render mode in node mode */}
               {mode === 'node' && (
                 <DropdownControl
@@ -900,6 +913,21 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
                     step={5}
                     onChange={(value) => updateSettings({ fillPercentage: value })}
                     ariaLabel='Fill Percentage'
+                  />
+                </ControlRow>
+              )}
+              
+              {/* Block Count - only show in block mode */}
+              {mode === 'block' && (
+                <ControlRow label='Block Count' theme={theme} currentValue={blockCount}>
+                  <SliderControl
+                    theme={theme}
+                    currentValue={blockCount}
+                    min={1}
+                    max={10}
+                    step={1}
+                    onChange={(value) => updateSettings({ blockCount: value })}
+                    ariaLabel='Block Count'
                   />
                 </ControlRow>
               )}

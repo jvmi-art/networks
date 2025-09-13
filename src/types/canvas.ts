@@ -20,6 +20,8 @@ export interface CanvasSettings {
   lightModeGlowFactor: number;
   darkModeGlowFactor: number;
   fillPercentage: number; // Percentage of circles to show as "on" (0-100)
+  blockCount: number; // Number of blocks to render in 3D mode (1-10)
+  autoRotateCamera: boolean; // Enable/disable camera auto-rotation in 3D mode
 }
 
 
