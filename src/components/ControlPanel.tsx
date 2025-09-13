@@ -6,14 +6,9 @@ import { RiSettings3Fill, RiShapeFill, RiPaletteFill, RiArrowDownSLine } from '@
 import { Sheet, SheetContent, SheetHeader, SheetTrigger } from './ui/sheet';
 import { Slider } from './ui/slider';
 import { Switch } from './ui/switch';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger
-} from './ui/dropdown-menu';
 import { useTheme } from '../theme/theme-provider';
 import { useCanvasSettings } from '../contexts/CanvasSettingsContext';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 
 /**
  * ControlPanel now uses context - no props needed
@@ -260,6 +255,14 @@ interface DropdownControlProps {
   ariaLabel: string;
 }
 
+interface PaletteDropdownControlProps {
+  theme: 'light' | 'dark';
+  currentValue: string;
+  onValueChange: (value: string) => void;
+  label: string;
+  ariaLabel: string;
+}
+
 const DropdownControl: React.FC<DropdownControlProps> = ({
   theme,
   currentValue,
@@ -273,8 +276,8 @@ const DropdownControl: React.FC<DropdownControlProps> = ({
 
   const getTriggerClass = () => {
     return theme === 'light'
-      ? 'bg-black/10 border-black/20 text-black hover:bg-black/15'
-      : 'bg-white/10 border-white/20 text-white hover:bg-white/15';
+      ? 'bg-black/10 border-black/20 text-black hover:bg-black/15 h-auto py-3 sm:py-2'
+      : 'bg-white/10 border-white/20 text-white hover:bg-white/15 h-auto py-3 sm:py-2';
   };
 
   const getContentClass = () => {
@@ -289,45 +292,118 @@ const DropdownControl: React.FC<DropdownControlProps> = ({
       : 'hover:bg-white/10 focus:bg-white/10 text-white cursor-pointer';
   };
 
-  const getCurrentValueDisplay = () => {
-    switch (currentValue) {
-      case 'circle':
-        return '⭕ Circle';
-      case 'emoji':
-        return '🌟 Emoji';
-      case 'dollar':
-        return '💲 Dollar';
-      default:
-        return '⭕ Circle';
-    }
+  const renderModes = {
+    circle: '⭕ Circle',
+    emoji: '🌟 Emoji',
+    dollar: '💲 Dollar'
   };
 
   return (
     <div className='flex items-center justify-between w-full'>
       <label className={getLabelClass()}>{label}</label>
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <motion.button
-            className={`px-4 py-3 sm:px-3 sm:py-2 rounded-md border text-sm ${getTriggerClass()} min-h-[44px] sm:min-h-0`}
-            aria-label={ariaLabel}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-          >
-            {getCurrentValueDisplay()}
-          </motion.button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent className={getContentClass()}>
-          <DropdownMenuItem className={getItemClass()} onClick={() => onValueChange('circle')}>
-            ⭕ Circle
-          </DropdownMenuItem>
-          <DropdownMenuItem className={getItemClass()} onClick={() => onValueChange('emoji')}>
-            🌟 Emoji
-          </DropdownMenuItem>
-          <DropdownMenuItem className={getItemClass()} onClick={() => onValueChange('dollar')}>
-            💲 Dollar
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+      <Select value={currentValue} onValueChange={(value) => onValueChange(value as 'circle' | 'emoji' | 'dollar')}>
+        <SelectTrigger 
+          className={`w-[140px] rounded-md border text-sm ${getTriggerClass()} min-h-[44px] sm:min-h-0`}
+          aria-label={ariaLabel}
+        >
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent 
+          className={getContentClass()}
+          position="popper"
+          sideOffset={5}
+        >
+          {Object.entries(renderModes).map(([key, name]) => (
+            <SelectItem 
+              key={key}
+              value={key}
+              className={getItemClass()}
+            >
+              {name}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+};
+
+const PaletteDropdownControl: React.FC<PaletteDropdownControlProps> = ({
+  theme,
+  currentValue,
+  onValueChange,
+  label,
+  ariaLabel
+}) => {
+  const getLabelClass = () => {
+    return theme === 'light' ? 'text-black text-sm font-medium' : 'text-white text-sm font-medium';
+  };
+
+  const getTriggerClass = () => {
+    return theme === 'light'
+      ? 'bg-black/10 border-black/20 text-black hover:bg-black/15 h-auto py-3 sm:py-2'
+      : 'bg-white/10 border-white/20 text-white hover:bg-white/15 h-auto py-3 sm:py-2';
+  };
+
+  const getContentClass = () => {
+    return theme === 'light'
+      ? 'bg-white/95 border-black/20 text-black backdrop-blur-md max-h-[220px]'
+      : 'bg-black/95 border-white/20 text-white backdrop-blur-md max-h-[220px]';
+  };
+
+  const getItemClass = () => {
+    return theme === 'light'
+      ? 'hover:bg-black/10 focus:bg-black/10 text-black cursor-pointer'
+      : 'hover:bg-white/10 focus:bg-white/10 text-white cursor-pointer';
+  };
+
+  const paletteNames: Record<string, string> = {
+    rainbow: '🌈 Rainbow',
+    neon: '💫 Neon',
+    cyberpunk: '🤖 Cyberpunk',
+    miami: '🌴 Miami',
+    pastel: '🎨 Pastel',
+    candy: '🍬 Candy',
+    chromatic: '🍃 Chromatic',
+    forest: '🌲 Forest',
+    ocean: '🌊 Ocean',
+    deepSea: '🐋 Deep Sea',
+    sunset: '🌅 Sunset',
+    autumn: '🍂 Autumn',
+    berry: '🫐 Berry',
+    earth: '🏜️ Earth',
+    vintage: '📻 Vintage',
+    nordic: '❄️ Nordic',
+    monochrome: '⚫ Monochrome',
+    random: '🎲 Random'
+  };
+
+  return (
+    <div className='flex items-center justify-between w-full'>
+      <label className={getLabelClass()}>{label}</label>
+      <Select value={currentValue} onValueChange={onValueChange}>
+        <SelectTrigger 
+          className={`w-[160px] rounded-md border text-sm ${getTriggerClass()} min-h-[44px] sm:min-h-0`}
+          aria-label={ariaLabel}
+        >
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent 
+          className={getContentClass()}
+          position="popper"
+          sideOffset={5}
+        >
+          {Object.entries(paletteNames).map(([key, name]) => (
+            <SelectItem 
+              key={key}
+              value={key}
+              className={getItemClass()}
+            >
+              {name}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
     </div>
   );
 };
@@ -386,12 +462,22 @@ const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
 
 interface ControlPanelProps {
   mode?: 'node' | 'block';
+  selectedPalette?: string;
+  onPaletteChange?: (palette: string) => void;
+  randomColorAnimation?: boolean;
+  onRandomColorAnimationChange?: (enabled: boolean) => void;
 }
 
 /**
  * ControlPanel provides UI controls for adjusting canvas settings
  */
-const ControlPanel: React.FC<ControlPanelProps> = ({ mode = 'node' }) => {
+const ControlPanel: React.FC<ControlPanelProps> = ({ 
+  mode = 'node',
+  selectedPalette,
+  onPaletteChange,
+  randomColorAnimation = false,
+  onRandomColorAnimationChange
+}) => {
   const { theme, setTheme } = useTheme();
   const { settings, updateSettings } = useCanvasSettings();
 
@@ -712,6 +798,17 @@ const ControlPanel: React.FC<ControlPanelProps> = ({ mode = 'node' }) => {
 
             {/* Display Options Section */}
             <CollapsibleSection title='Display Options' icon={<RiPaletteFill />} theme={theme}>
+              {/* Palette Selector */}
+              {selectedPalette && onPaletteChange && (
+                <PaletteDropdownControl
+                  theme={theme}
+                  currentValue={selectedPalette}
+                  onValueChange={onPaletteChange}
+                  label='Color Palette'
+                  ariaLabel='Select color palette'
+                />
+              )}
+
               <SwitchControl
                 theme={theme}
                 isChecked={theme === 'dark'}
@@ -727,6 +824,17 @@ const ControlPanel: React.FC<ControlPanelProps> = ({ mode = 'node' }) => {
                 label='Animations'
                 ariaLabel={`${animationsEnabled ? 'Disable' : 'Enable'} animations`}
               />
+
+              {/* Random Color Animation Toggle - only show in block mode */}
+              {mode === 'block' && onRandomColorAnimationChange && (
+                <SwitchControl
+                  theme={theme}
+                  isChecked={randomColorAnimation}
+                  onCheckedChange={onRandomColorAnimationChange}
+                  label='Color Animation'
+                  ariaLabel={`${randomColorAnimation ? 'Disable' : 'Enable'} color animation`}
+                />
+              )}
 
               <SwitchControl
                 theme={theme}

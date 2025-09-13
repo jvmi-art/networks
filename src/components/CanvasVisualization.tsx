@@ -11,9 +11,8 @@ import ModeTabs, { ModeType } from './ModeTabs';
 import DimensionTabs from './DimensionTabs';
 import { generateColorGrid } from '../constants';
 import ControlPanel from './ControlPanel';
-import PaletteSelector, { PaletteType, palettes } from './PaletteSelector';
+import { PaletteType, palettes } from './PaletteSelector';
 import { useQueryParams } from '../hooks/useQueryParams';
-import ColorAnimationToggle from './ColorAnimationToggle';
 import { generateRandomPalette, getColorPalette } from '../utils/paletteUtils';
 
 function CanvasVisualization() {
@@ -105,7 +104,13 @@ function CanvasVisualization() {
             <div className='flex flex-col sm:flex-row items-center gap-2'>
               {/* First row on mobile: Settings and Mode Tabs */}
               <div className='flex items-center gap-2 w-full sm:w-auto justify-center sm:justify-start'>
-                <ControlPanel mode={activeMode} />
+                <ControlPanel 
+                  mode={activeMode} 
+                  selectedPalette={selectedPalette}
+                  onPaletteChange={setSelectedPalette}
+                  randomColorAnimation={randomColorAnimation}
+                  onRandomColorAnimationChange={setRandomColorAnimation}
+                />
                 <ModeTabs activeTab={activeMode} onTabChange={setActiveMode} />
               </div>
 
@@ -117,19 +122,6 @@ function CanvasVisualization() {
 
             {/* Right side controls container */}
             <div className='flex items-center gap-2 justify-center sm:justify-end'>
-              {/* Palette Selector - show for all modes */}
-              <PaletteSelector
-                selectedPalette={selectedPalette}
-                onPaletteChange={setSelectedPalette}
-              />
-
-              {/* Random Color Animation Toggle - only in block mode */}
-              <ColorAnimationToggle
-                isEnabled={randomColorAnimation}
-                onToggle={() => setRandomColorAnimation(!randomColorAnimation)}
-                visible={activeMode === 'block'}
-              />
-
               {/* Edit Mode Controls - only show in node mode */}
               {activeMode === 'node' && (
                 <EditModeControls
