@@ -32,18 +32,36 @@ export function Cube({
 }: CubeProps) {
   const [mouseRay, setMouseRay] = useState<THREE.Raycaster | null>(null);
   const hasCalledReady = useRef(false);
+  const groupRef = useRef<THREE.Group>(null);
+  const rotationTime = useRef(0);
   
-  // Call onSceneReady once after first render
-  useFrame(() => {
+  // Auto-rotation and onSceneReady
+  useFrame((state, delta) => {
+    // Call onSceneReady once after first render
     if (!hasCalledReady.current && onSceneReady && circles.length > 0) {
       hasCalledReady.current = true;
-      // Call immediately since circles are already rendered
       onSceneReady();
+    }
+    
+    // Diagonal rotation that shows all 6 faces
+    if (groupRef.current) {
+      rotationTime.current += delta;
+      
+      // Use a diagonal axis rotation (1,1,0 normalized) 
+      // This creates a rotation that naturally shows all 6 faces
+      const speed = 0.15; // Reduced from 0.3 for slower rotation
+      const angle = rotationTime.current * speed;
+      
+      // Set rotation using quaternion for smooth diagonal rotation
+      // Rotating around the axis (1, 1, 0.5) shows all faces nicely
+      const axis = new THREE.Vector3(1, 1, 0.5).normalize();
+      const quaternion = new THREE.Quaternion().setFromAxisAngle(axis, angle);
+      groupRef.current.quaternion.copy(quaternion);
     }
   });
 
   return (
-    <group>
+    <group ref={groupRef}>
       <CameraController 
         orbitControlsRef={orbitControlsRef} 
         animationTarget={animationTarget}

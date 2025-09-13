@@ -4,14 +4,18 @@
 
 a collective art experience collaborating to build a digital 3d sculpture inspired by ethereum.
 
+## [here's the live site under development](https://networks-henna.vercel.app/)
+
 ## What is this?
 
-this interface is a **sandbox environment** — a place to play with the visual language of _networks_.
+this interface is a **sandbox environment** — a place to explore the visual language of _networks_.
+
+## Network Language
 
 - a **node** is a 5×5 grid of colorful circles.
 - multiple nodes come together to form a **block**, a rotating 3d sculpture.
 
-inside the sandbox, you can:
+## Things to try
 
 - click circles to change their colors
 - swap between different color palettes to see new variations

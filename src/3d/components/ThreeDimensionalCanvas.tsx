@@ -31,19 +31,17 @@ const ThreeDimensionalCanvas: React.FC<ThreeDimensionalCanvasProps> = ({
   customGridColors,
   isEditMode = false,
   colorPalette,
-  hideControls = false,
   randomColorAnimation = false,
   useRandomColors = false
 }) => {
   const { settings } = useCanvasSettings();
   const { theme } = useTheme();
   const [circles, setCircles] = useState<Circle3D[]>([]);
-  const [dimensions, setDimensions] = useState({ width: 600, height: 600 });
   const [cubeChunkPattern, setCubeChunkPattern] = useState<boolean[][][]>([]);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const orbitControlsRef = useRef<any>(null);
   const [isAnimating, setIsAnimating] = useState(false);
-  const wasAutoRotatingRef = useRef(!isEditMode);
+  const wasAutoRotatingRef = useRef(false);
   const [animationTarget, setAnimationTarget] = useState<{ position: THREE.Vector3; target: THREE.Vector3 } | null>(null);
   const [currentFaceIndex, setCurrentFaceIndex] = useState(0);
   const [isSceneLoading, setIsSceneLoading] = useState(true);
@@ -357,57 +355,59 @@ const ThreeDimensionalCanvas: React.FC<ThreeDimensionalCanvasProps> = ({
 
   const backgroundColor = theme === 'light' ? '#ffffff' : '#000000';
 
-  // Calculate canvas dimensions based on hideControls
-  const getCanvasDimensions = useCallback(() => {
-    if (hideControls) {
-      // Full window when controls are hidden
-      return {
-        width: window.innerWidth,
-        height: window.innerHeight
-      };
-    } else {
-      // Fixed size with max 600px when controls are visible
-      const isMobile = window.innerWidth < 640;
-      const headerHeight = isMobile ? 180 : 120;
-      const horizontalPadding = 40;
-      const verticalPadding = 40;
-
-      const maxWidth = Math.min(600, window.innerWidth - horizontalPadding);
-      const maxHeight = Math.min(600, window.innerHeight - headerHeight - verticalPadding);
-
-      // Use the smaller dimension to maintain square aspect ratio
-      const size = Math.min(maxWidth, maxHeight);
-
-      return {
-        width: size,
-        height: size
-      };
+  // Calculate dynamic camera distance based on screen size
+  const calculateCameraDistance = useCallback(() => {
+    const minDimension = Math.min(window.innerWidth, window.innerHeight);
+    const maxDimension = Math.max(window.innerWidth, window.innerHeight);
+    
+    // Base distance that works well for most screens (closer for more zoom)
+    let baseDistance = 4;
+    
+    // Adjust for very small screens (mobile)
+    if (minDimension < 600) {
+      baseDistance = 4.5;
     }
-  }, [hideControls]);
+    // Adjust for tablets
+    else if (minDimension < 1024) {
+      baseDistance = 4.2;
+    }
+    // Default for desktop
+    else {
+      baseDistance = 4;
+    }
+    
+    // Further adjust based on aspect ratio
+    const aspectRatio = maxDimension / minDimension;
+    if (aspectRatio > 2) {
+      // Ultra-wide or tall screens need more distance
+      baseDistance *= 1.15;
+    }
+    
+    return [baseDistance, baseDistance, baseDistance];
+  }, []);
 
-  // Handle window resize
+  const [cameraPosition, setCameraPosition] = useState(() => calculateCameraDistance());
+
+  // Update camera position on resize
   React.useEffect(() => {
     const handleResize = () => {
-      setDimensions(getCanvasDimensions());
+      setCameraPosition(calculateCameraDistance());
     };
-
-    // Set initial dimensions
-    handleResize();
 
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
-  }, [getCanvasDimensions]);
+  }, [calculateCameraDistance]);
 
-  const canvasStyle = hideControls
-    ? { width: '100vw', height: '100vh' }
-    : { width: `${dimensions.width}px`, height: `${dimensions.height}px` };
+  // Window resize is handled by the Canvas component itself
+
+  // Always use full viewport
+  const canvasStyle = { width: '100vw', height: '100vh' };
 
   // Handle camera animation to any position
   const animateToPosition = useCallback((targetKey: CameraPositionKey) => {
     if (!isAnimating && orbitControlsRef.current) {
       setIsAnimating(true);
-      // Store current auto-rotate state and disable it
-      wasAutoRotatingRef.current = orbitControlsRef.current.autoRotate;
+      // Disable auto-rotate during animation
       orbitControlsRef.current.autoRotate = false;
       // Set the animation target
       setAnimationTarget(CAMERA_POSITIONS[targetKey]);
@@ -419,12 +419,8 @@ const ThreeDimensionalCanvas: React.FC<ThreeDimensionalCanvasProps> = ({
     // Small delay to ensure smooth transition
     requestAnimationFrame(() => {
       if (orbitControlsRef.current) {
-        // Only restore auto-rotate if we're at the default position
-        if (currentFaceIndex === 0) {
-          orbitControlsRef.current.autoRotate = wasAutoRotatingRef.current;
-        } else {
-          orbitControlsRef.current.autoRotate = false;
-        }
+        // Keep auto-rotate disabled (cube rotates itself)
+        orbitControlsRef.current.autoRotate = false;
         orbitControlsRef.current.update();
       }
       setIsAnimating(false);
@@ -453,11 +449,7 @@ const ThreeDimensionalCanvas: React.FC<ThreeDimensionalCanvasProps> = ({
   }, [animateToPosition]);
 
   return (
-    <div
-      className={`${
-        hideControls ? 'w-screen h-screen' : 'w-full h-full flex justify-center items-center'
-      }`}
-    >
+    <div className="fixed inset-0 w-screen h-screen">
       <div style={canvasStyle} className="relative overflow-hidden">
         {/* Loading screen with split panel animation */}
         {isSceneLoading && (
@@ -507,7 +499,7 @@ const ThreeDimensionalCanvas: React.FC<ThreeDimensionalCanvasProps> = ({
           </div>
         )}
         <Canvas 
-          camera={{ position: [3, 3, 3], fov: 50 }} 
+          camera={{ position: cameraPosition as [number, number, number], fov: 45 }} 
           style={{ 
             background: backgroundColor,
             opacity: sceneInitialized ? 1 : 0,
@@ -532,9 +524,9 @@ const ThreeDimensionalCanvas: React.FC<ThreeDimensionalCanvasProps> = ({
             ref={orbitControlsRef}
             enableZoom={true}
             enablePan={false}
-            minDistance={2}
-            maxDistance={8}
-            autoRotate={!isEditMode}
+            minDistance={2.5}
+            maxDistance={10}
+            autoRotate={true}
             autoRotateSpeed={0.5}
             enableDamping={true}
             dampingFactor={0.05}

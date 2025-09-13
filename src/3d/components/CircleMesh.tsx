@@ -37,11 +37,15 @@ export function CircleMesh({ circle, mouseRay, theme }: CircleMeshProps) {
   useFrame(() => {
     if (meshRef.current) {
       // Calculate distance from ray to circle position
-      if (mouseRay) {
-        // Get the closest point on the ray to the circle's position
+      if (mouseRay && meshRef.current.parent) {
+        // Transform circle position to world space to account for parent rotation
+        const worldPosition = new THREE.Vector3();
+        meshRef.current.getWorldPosition(worldPosition);
+        
+        // Get the closest point on the ray to the circle's world position
         const closestPoint = new THREE.Vector3();
-        mouseRay.ray.closestPointToPoint(circle.position, closestPoint);
-        const distance = circle.position.distanceTo(closestPoint);
+        mouseRay.ray.closestPointToPoint(worldPosition, closestPoint);
+        const distance = worldPosition.distanceTo(closestPoint);
 
         // Consistent hover scale across all grid sizes
         const hoverScaleFactor = 3.0; // Fixed hover scale for consistency

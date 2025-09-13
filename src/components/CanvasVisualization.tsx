@@ -146,26 +146,28 @@ function CanvasVisualization() {
       )}
 
       {/* Main content */}
-      <div
-        className={`flex-1 flex justify-center items-center min-h-0 ${
-          hideControls ? 'p-0' : 'pt-20 sm:pt-16'
-        }`}
-      >
+      {activeMode === 'block' ? (
+        // 3D canvas takes full screen
+        <ThreeDimensionalCanvas
+          customGridColors={savedGridColors}
+          isEditMode={isEditMode}
+          colorPalette={getColorPalette(selectedPalette, palettes, randomColorPalette)}
+          hideControls={hideControls}
+          randomColorAnimation={randomColorAnimation}
+          useRandomColors={selectedPalette === 'random'}
+        />
+      ) : (
+        // 2D canvas in centered container
         <div
-          className={`flex justify-center items-center rounded-2xl overflow-hidden ${
-            hideControls ? 'w-full h-full' : ''
+          className={`flex-1 flex justify-center items-center min-h-0 ${
+            hideControls ? 'p-0' : 'pt-20 sm:pt-16'
           }`}
         >
-          {activeMode === 'block' ? (
-            <ThreeDimensionalCanvas
-              customGridColors={savedGridColors}
-              isEditMode={isEditMode}
-              colorPalette={getColorPalette(selectedPalette, palettes, randomColorPalette)}
-              hideControls={hideControls}
-              randomColorAnimation={randomColorAnimation}
-              useRandomColors={selectedPalette === 'random'}
-            />
-          ) : (
+          <div
+            className={`flex justify-center items-center rounded-2xl overflow-hidden ${
+              hideControls ? 'w-full h-full' : ''
+            }`}
+          >
             <TwoDimensionalCanvas
               customGridColors={savedGridColors}
               isEditMode={isEditMode}
@@ -176,9 +178,9 @@ function CanvasVisualization() {
               }
               hideControls={hideControls}
             />
-          )}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
