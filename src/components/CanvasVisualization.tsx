@@ -8,7 +8,6 @@ import { useTheme } from '../theme/theme-provider';
 import { useCanvasSettings } from '../contexts/CanvasSettingsContext';
 import EditModeControls from './EditModeControls';
 import ModeTabs, { ModeType } from './ModeTabs';
-import DimensionTabs from './DimensionTabs';
 import { generateColorGrid } from '../constants';
 import ControlPanel from './ControlPanel';
 import { PaletteType, palettes } from './PaletteSelector';

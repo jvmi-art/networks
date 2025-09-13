@@ -8,13 +8,10 @@ import { useCanvasSettings } from '../../contexts/CanvasSettingsContext';
 import { useTheme } from '../../theme/theme-provider';
 import { useColorAnimation } from '../../hooks/useColorAnimation';
 import { generateCubeChunkPattern } from '../../utils/chunkPattern';
-import { Button } from '../../components/ui/button';
-import { RotateCcw, ChevronLeft, ChevronRight } from 'lucide-react';
 import AnimatedLogo from '../../components/AnimatedLogo';
 import { Circle3D } from '../entities/Circle3D';
 import { Cube } from './Cube';
 import { mapToRoundedCube } from '../utils/roundedCubeMapping';
-import { CAMERA_POSITIONS, CameraPositionKey } from '../constants/cameraPositions';
 
 
 // Main ThreeDimensionalCanvas component
@@ -29,7 +26,6 @@ interface ThreeDimensionalCanvasProps {
 
 const ThreeDimensionalCanvas: React.FC<ThreeDimensionalCanvasProps> = ({
   customGridColors,
-  isEditMode = false,
   colorPalette,
   randomColorAnimation = false,
   useRandomColors = false
@@ -40,10 +36,8 @@ const ThreeDimensionalCanvas: React.FC<ThreeDimensionalCanvasProps> = ({
   const [cubeChunkPattern, setCubeChunkPattern] = useState<boolean[][][]>([]);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const orbitControlsRef = useRef<any>(null);
-  const [isAnimating, setIsAnimating] = useState(false);
-  const wasAutoRotatingRef = useRef(false);
+  const [, setIsAnimating] = useState(false);
   const [animationTarget, setAnimationTarget] = useState<{ position: THREE.Vector3; target: THREE.Vector3 } | null>(null);
-  const [currentFaceIndex, setCurrentFaceIndex] = useState(0);
   const [isSceneLoading, setIsSceneLoading] = useState(true);
   const [sceneInitialized, setSceneInitialized] = useState(false);
   const [loadingExiting, setLoadingExiting] = useState(false);
@@ -51,9 +45,6 @@ const ThreeDimensionalCanvas: React.FC<ThreeDimensionalCanvasProps> = ({
   const loadingStartTime = useRef(Date.now());
   const isFirstLoad = useRef(true);
   
-  // Face order for navigation: default, front, right, back, left, top, bottom
-  const faceOrder = ['default', 'front', 'right', 'back', 'left', 'top', 'bottom'] as const;
-
   // Generate cube-wide chunk pattern when fillPercentage changes
   React.useEffect(() => {
     const gridWidth = settings.gridWidth || settings.gridSize;
@@ -403,17 +394,6 @@ const ThreeDimensionalCanvas: React.FC<ThreeDimensionalCanvasProps> = ({
   // Always use full viewport
   const canvasStyle = { width: '100vw', height: '100vh' };
 
-  // Handle camera animation to any position
-  const animateToPosition = useCallback((targetKey: CameraPositionKey) => {
-    if (!isAnimating && orbitControlsRef.current) {
-      setIsAnimating(true);
-      // Disable auto-rotate during animation
-      orbitControlsRef.current.autoRotate = false;
-      // Set the animation target
-      setAnimationTarget(CAMERA_POSITIONS[targetKey]);
-    }
-  }, [isAnimating]);
-
   // Called when any animation completes
   const handleAnimationComplete = useCallback(() => {
     // Small delay to ensure smooth transition
@@ -426,27 +406,8 @@ const ThreeDimensionalCanvas: React.FC<ThreeDimensionalCanvasProps> = ({
       setIsAnimating(false);
       setAnimationTarget(null);
     });
-  }, [currentFaceIndex]);
+  }, []);
 
-  // Navigate to previous face
-  const handlePreviousFace = useCallback(() => {
-    const newIndex = (currentFaceIndex - 1 + faceOrder.length) % faceOrder.length;
-    setCurrentFaceIndex(newIndex);
-    animateToPosition(faceOrder[newIndex]);
-  }, [currentFaceIndex, animateToPosition]);
-
-  // Navigate to next face
-  const handleNextFace = useCallback(() => {
-    const newIndex = (currentFaceIndex + 1) % faceOrder.length;
-    setCurrentFaceIndex(newIndex);
-    animateToPosition(faceOrder[newIndex]);
-  }, [currentFaceIndex, animateToPosition]);
-
-  // Reset camera (always goes to default)
-  const handleResetCamera = useCallback(() => {
-    setCurrentFaceIndex(0);
-    animateToPosition('default');
-  }, [animateToPosition]);
 
   return (
     <div className="fixed inset-0 w-screen h-screen">

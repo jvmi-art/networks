@@ -60,7 +60,6 @@ const TwoDimensionalCanvas: React.FC<TwoDimensionalCanvasProps> = ({
   const [circles, setCircles] = useState<CircleEntity[]>([]);
   const [p5Instance, setP5Instance] = useState<p5Types | null>(null);
   const [customPalette, setCustomPalette] = useState<string[] | null>(null);
-  const [, setMaskData] = useState<{ [key: string]: boolean } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isProcessingImage, setIsProcessingImage] = useState(false);
 
@@ -135,22 +134,6 @@ const TwoDimensionalCanvas: React.FC<TwoDimensionalCanvasProps> = ({
   };
 
 
-  /**
-   * Handle mask data from the ImageUploader
-   */
-  const handleMaskDataReady = (maskPoints: { [key: string]: boolean }) => {
-    setMaskData(maskPoints);
-
-    if (p5Instance) {
-      // Create circles only for points inside the mask
-      const palette = customPalette || settings.colorPalette;
-      const newCircles = setupGridWithMask(p5Instance, maskPoints, palette);
-      setCircles(newCircles);
-
-      // Update interaction handler with new circles
-      updateInteractionHandler(newCircles);
-    }
-  };
 
   /**
    * Handle direct image upload from camera button
@@ -335,91 +318,6 @@ const TwoDimensionalCanvas: React.FC<TwoDimensionalCanvasProps> = ({
     ]
   );
 
-  /**
-   * Initialize grid with masked circles
-   */
-  const setupGridWithMask = useCallback(
-    (
-      p5: p5Types,
-      maskPoints: { [key: string]: boolean },
-      colorPalette: string[],
-      skipEnterAnimation?: boolean
-    ): CircleEntity[] => {
-      const newCircles: CircleEntity[] = [];
-
-      // Get grid dimensions (use new separate width/height or fall back to gridSize)
-      const gridWidth = settings.gridWidth || settings.gridSize;
-      const gridHeight = settings.gridHeight || settings.gridSize;
-
-      // Calculate grid spacing using the utility
-      const gridSpacing = calculateGridSpacing(
-        p5.width,
-        p5.height,
-        gridWidth,
-        gridHeight,
-        settings.padding,
-        settings.gapFactor
-      );
-
-      for (let row = 0; row < gridHeight; row++) {
-        for (let col = 0; col < gridWidth; col++) {
-          const posKey = getPositionKey(row, col);
-
-          // Skip this point if it's not inside the mask
-          if (!maskPoints[posKey]) {
-            continue;
-          }
-
-          const { x, y } = getCirclePositionByRowCol(row, col, gridSpacing);
-
-          // For mask mode, assign random colors from the palette
-          const colorIndex = Math.floor(p5.random(colorPalette.length));
-          const originalColor = p5.color(colorPalette[colorIndex]);
-
-          // Create the circle entity
-          const circle = new CircleEntity(
-            p5,
-            x,
-            y,
-            gridSpacing.circleDiameter!,
-            originalColor,
-            circleOptions
-          );
-          circle.row = row;
-          circle.col = col;
-
-          // Start enter animation with random delay unless skipped
-          if (!skipEnterAnimation) {
-            // Calculate max delay based on grid size
-            // Smaller grids (5x5) = 500ms max, larger grids (25x25) = 3000ms max
-            const totalCircles = gridWidth * gridHeight;
-            const maxDelay = Math.min(500 + totalCircles * 4, 3000); // Scale from 500ms to 3000ms
-            const randomDelay = Math.random() * maxDelay;
-            circle.startEnterAnimation(p5, randomDelay);
-          } else {
-            // Mark as already entered if skipping animation
-            circle.hasEntered = true;
-          }
-
-          // Store the color index in our grid
-          colorGridRef.current[posKey] = colorIndex;
-
-          newCircles.push(circle);
-        }
-      }
-
-      return newCircles;
-    },
-    // Only include essential settings that affect grid structure
-    [
-      settings.gridWidth,
-      settings.gridSize,
-      settings.gridHeight,
-      settings.padding,
-      settings.gapFactor,
-      circleOptions
-    ]
-  );
 
   //------------------------------------------
   // Mouse Interaction Handlers

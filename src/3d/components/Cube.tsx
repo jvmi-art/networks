@@ -36,7 +36,7 @@ export function Cube({
   const rotationTime = useRef(0);
   
   // Auto-rotation and onSceneReady
-  useFrame((state, delta) => {
+  useFrame((_, delta) => {
     // Call onSceneReady once after first render
     if (!hasCalledReady.current && onSceneReady && circles.length > 0) {
       hasCalledReady.current = true;
