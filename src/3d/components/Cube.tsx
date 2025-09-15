@@ -8,6 +8,7 @@ import { CircleMesh } from './CircleMesh';
 import { RoundedCubeFaces } from './RoundedCubeFaces';
 import { MouseTracker } from './MouseTracker';
 import { CameraController } from './CameraController';
+import { InteractiveCubeFaces } from './InteractiveCubeFaces';
 
 interface CubeProps {
   circles: Circle3D[];
@@ -20,6 +21,9 @@ interface CubeProps {
   onSceneReady?: () => void;
   index?: number;
   disableHover?: boolean;
+  isEditMode?: boolean;
+  onFaceClick?: (face: number) => void;
+  selectedFragment?: string[][];
 }
 
 /**
@@ -34,12 +38,42 @@ export function Cube({
   onAnimationComplete, 
   onSceneReady,
   index = 0,
-  disableHover = false
+  disableHover = false,
+  isEditMode = false,
+  onFaceClick,
+  selectedFragment
 }: CubeProps) {
   const [mouseRay, setMouseRay] = useState<THREE.Raycaster | null>(null);
   const hasCalledReady = useRef(false);
   const groupRef = useRef<THREE.Group>(null);
   const rotationTime = useRef(0);
+  const [isDragging, setIsDragging] = useState(false);
+  
+  // Mouse event handlers to track dragging state
+  React.useEffect(() => {
+    const handleMouseDown = () => {
+      if (orbitControlsRef.current) {
+        setIsDragging(true);
+      }
+    };
+    
+    const handleMouseUp = () => {
+      setIsDragging(false);
+    };
+    
+    // Add event listeners
+    window.addEventListener('mousedown', handleMouseDown);
+    window.addEventListener('mouseup', handleMouseUp);
+    window.addEventListener('touchstart', handleMouseDown);
+    window.addEventListener('touchend', handleMouseUp);
+    
+    return () => {
+      window.removeEventListener('mousedown', handleMouseDown);
+      window.removeEventListener('mouseup', handleMouseUp);
+      window.removeEventListener('touchstart', handleMouseDown);
+      window.removeEventListener('touchend', handleMouseUp);
+    };
+  }, [orbitControlsRef]);
   
   // Auto-rotation and onSceneReady
   useFrame((_, delta) => {
@@ -49,8 +83,8 @@ export function Cube({
       onSceneReady();
     }
     
-    // Diagonal rotation that shows all 6 faces
-    if (groupRef.current) {
+    // Diagonal rotation that shows all 6 faces (pause when dragging or in edit mode)
+    if (groupRef.current && !isDragging && !isEditMode) {
       rotationTime.current += delta;
       
       // Use different rotation axes for each cube for variety
@@ -87,6 +121,11 @@ export function Cube({
         <MouseTracker onMouseMove={setMouseRay} />
       )}
       <RoundedCubeFaces theme={theme} />
+      <InteractiveCubeFaces 
+        isEditMode={isEditMode}
+        onFaceClick={onFaceClick}
+        selectedFragment={selectedFragment}
+      />
       {circles.map((circle, circleIndex) => (
         <CircleMesh 
           key={circleIndex} 

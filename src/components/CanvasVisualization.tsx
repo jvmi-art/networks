@@ -13,12 +13,16 @@ import ControlPanel from './ControlPanel';
 import { PaletteType, palettes } from './PaletteSelector';
 import { useQueryParams } from '../hooks/useQueryParams';
 import { generateRandomPalette, getColorPalette } from '../utils/paletteUtils';
+import { useFragments } from '../contexts/FragmentContext';
+import { RiSaveLine, RiEditLine } from '@remixicon/react';
+import FragmentLibrary from './FragmentLibrary';
 
 function CanvasVisualization() {
   const { theme } = useTheme();
   const { settings } = useCanvasSettings();
   const [searchParams] = useSearchParams();
   const [isEditMode, setIsEditMode] = useState(false);
+  const [is3DEditMode, setIs3DEditMode] = useState(false);
   const [selectedColor, setSelectedColor] = useState('#FF6B6B');
 
   // Initialize activeMode based on query parameter
@@ -47,6 +51,9 @@ function CanvasVisualization() {
 
   // Apply query parameters and get hideControls
   const { hideControls } = useQueryParams();
+  
+  // Fragment context
+  const { addFragment, getFragment, selectedFragmentId } = useFragments();
 
   // Regenerate grid colors when settings or palette changes
   useEffect(() => {
@@ -70,6 +77,19 @@ function CanvasVisualization() {
     },
     [savedGridColors, selectedColor, isEditMode]
   );
+
+  // Save current grid as a fragment (only works in 5x5 mode)
+  const saveAsFragment = useCallback(() => {
+    if (settings.gridWidth === 5 && settings.gridHeight === 5) {
+      const fragmentName = prompt('Enter a name for this fragment:');
+      if (fragmentName) {
+        addFragment({
+          name: fragmentName,
+          colors: savedGridColors
+        });
+      }
+    }
+  }, [settings.gridWidth, settings.gridHeight, savedGridColors, addFragment]);
 
   const handleRandomize = useCallback(() => {
     setSavedGridColors(
@@ -113,6 +133,22 @@ function CanvasVisualization() {
 
             {/* Right side - Edit Mode Controls */}
             <div className='flex items-center gap-2'>
+              {/* Save Fragment button - only show in 5x5 node mode */}
+              {activeMode === 'node' && settings.gridWidth === 5 && settings.gridHeight === 5 && (
+                <button
+                  onClick={saveAsFragment}
+                  className={`px-3 py-1.5 rounded-lg flex items-center gap-2 transition-colors ${
+                    theme === 'light'
+                      ? 'bg-white/80 hover:bg-white text-black border border-black/10'
+                      : 'bg-black/80 hover:bg-black text-white border border-white/10'
+                  }`}
+                  title="Save as Fragment"
+                >
+                  <RiSaveLine size={16} />
+                  <span className="text-sm">Save Fragment</span>
+                </button>
+              )}
+              
               {/* Edit Mode Controls - only show in node mode */}
               {activeMode === 'node' && (
                 <EditModeControls
@@ -128,6 +164,26 @@ function CanvasVisualization() {
                   }
                 />
               )}
+              
+              {/* Edit button for 3D mode */}
+              {activeMode === 'block' && (
+                <button
+                  onClick={() => setIs3DEditMode(!is3DEditMode)}
+                  className={`px-3 py-1.5 rounded-lg flex items-center gap-2 transition-colors ${
+                    is3DEditMode
+                      ? theme === 'light'
+                        ? 'bg-black text-white'
+                        : 'bg-white text-black'
+                      : theme === 'light'
+                      ? 'bg-white/80 hover:bg-white text-black border border-black/10'
+                      : 'bg-black/80 hover:bg-black text-white border border-white/10'
+                  }`}
+                  title="Edit Cube with Fragments"
+                >
+                  <RiEditLine size={16} />
+                  <span className="text-sm">{is3DEditMode ? 'Done' : 'Edit'}</span>
+                </button>
+              )}
             </div>
           </div>
         </header>
@@ -135,15 +191,31 @@ function CanvasVisualization() {
 
       {/* Main content */}
       {activeMode === 'block' ? (
-        // 3D canvas takes full screen
-        <ThreeDimensionalCanvas
-          customGridColors={savedGridColors}
-          isEditMode={isEditMode}
-          colorPalette={getColorPalette(selectedPalette, palettes, randomColorPalette)}
-          hideControls={hideControls}
-          randomColorAnimation={randomColorAnimation}
-          useRandomColors={selectedPalette === 'random'}
-        />
+        <>
+          {/* 3D canvas takes full screen */}
+          <ThreeDimensionalCanvas
+            customGridColors={savedGridColors}
+            isEditMode={is3DEditMode}
+            colorPalette={getColorPalette(selectedPalette, palettes, randomColorPalette)}
+            hideControls={hideControls}
+            randomColorAnimation={randomColorAnimation}
+            useRandomColors={selectedPalette === 'random'}
+            onFaceClick={(face) => {
+              // Apply selected fragment to the clicked face
+              if (selectedFragmentId) {
+                const fragment = getFragment(selectedFragmentId);
+                if (fragment) {
+                  // Here you would apply the fragment colors to the face
+                  // For now, just log it
+                  console.log('Applying fragment', fragment.name, 'to face', face);
+                }
+              }
+            }}
+            selectedFragment={selectedFragmentId ? getFragment(selectedFragmentId)?.colors : undefined}
+          />
+          {/* Fragment Library - only show in edit mode */}
+          {!hideControls && is3DEditMode && <FragmentLibrary />}
+        </>
       ) : (
         // 2D canvas in centered container
         <div
@@ -165,6 +237,7 @@ function CanvasVisualization() {
                 Array.isArray(palettes[selectedPalette]) ? palettes[selectedPalette] : undefined
               }
               hideControls={hideControls}
+              onImageUpload={setSavedGridColors}
             />
           </div>
         </div>

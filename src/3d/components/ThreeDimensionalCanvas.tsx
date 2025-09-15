@@ -22,13 +22,18 @@ interface ThreeDimensionalCanvasProps {
   hideControls?: boolean;
   randomColorAnimation?: boolean;
   useRandomColors?: boolean;
+  onFaceClick?: (face: number) => void;
+  selectedFragment?: string[][];
 }
 
 const ThreeDimensionalCanvas: React.FC<ThreeDimensionalCanvasProps> = ({
   customGridColors,
+  isEditMode = false,
   colorPalette,
   randomColorAnimation = false,
-  useRandomColors = false
+  useRandomColors = false,
+  onFaceClick,
+  selectedFragment
 }) => {
   const { settings } = useCanvasSettings();
   const { theme } = useTheme();
@@ -36,6 +41,7 @@ const ThreeDimensionalCanvas: React.FC<ThreeDimensionalCanvasProps> = ({
   const [cubeCircles, setCubeCircles] = useState<Circle3D[][]>(() => 
     Array(blockCount).fill(null).map(() => [])
   );
+  const [faceColors, setFaceColors] = useState<{ [key: number]: string[][] }>({});
   const [cubeChunkPattern, setCubeChunkPattern] = useState<boolean[][][]>([]);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const orbitControlsRef = useRef<any>(null);
@@ -56,6 +62,46 @@ const ThreeDimensionalCanvas: React.FC<ThreeDimensionalCanvasProps> = ({
     setCubeChunkPattern(patterns);
   }, [settings.fillPercentage, settings.gridSize, settings.gridWidth, settings.gridHeight]);
 
+  // Handle applying fragment to a face
+  const handleFaceClick = useCallback((face: number) => {
+    if (!selectedFragment || !onFaceClick) return;
+    
+    // Store the fragment colors for this face
+    setFaceColors(prev => ({
+      ...prev,
+      [face]: selectedFragment
+    }));
+    
+    // Update the circles on this face with fragment colors
+    const gridWidth = settings.gridWidth || settings.gridSize;
+    const gridHeight = settings.gridHeight || settings.gridSize;
+    
+    // For each cube, update the circles on the clicked face
+    setCubeCircles(prevCubeCircles => {
+      return prevCubeCircles.map((circles) => {
+        // Update circles that belong to the clicked face
+        circles.forEach((circle) => {
+          if (circle.face === face) {
+            const row = circle.row || 0;
+            const col = circle.col || 0;
+            
+            // Apply fragment color if within 5x5 bounds (fragments are 5x5)
+            if (row < 5 && col < 5 && selectedFragment[row] && selectedFragment[row][col]) {
+              const newColor = selectedFragment[row][col];
+              circle.setColor(newColor);
+            }
+          }
+        });
+        
+        return circles;
+      });
+    });
+    
+    if (onFaceClick) {
+      onFaceClick(face);
+    }
+  }, [selectedFragment, onFaceClick, settings.gridWidth, settings.gridHeight, settings.gridSize]);
+  
   // Generate circles for all 6 faces of a single cube following the curved surface
   const generateCubeCircles = useCallback(() => {
     const newCircles: Circle3D[] = [];
@@ -197,7 +243,16 @@ const ThreeDimensionalCanvas: React.FC<ThreeDimensionalCanvasProps> = ({
             isEnabled = cubeChunkPattern[face][row][col];
           }
 
-          const circle = new Circle3D(curvedPos.x, curvedPos.y, curvedPos.z, circleSize, color, isEnabled);
+          // Check if we have a saved fragment for this face
+          let finalColor = color;
+          if (faceColors[face] && row < 5 && col < 5 && faceColors[face][row] && faceColors[face][row][col]) {
+            finalColor = faceColors[face][row][col];
+          }
+          
+          const circle = new Circle3D(curvedPos.x, curvedPos.y, curvedPos.z, circleSize, finalColor, isEnabled);
+          circle.face = face;
+          circle.row = row;
+          circle.col = col;
           
           // Set the disabled color based on theme
           if (!isEnabled) {
@@ -237,7 +292,8 @@ const ThreeDimensionalCanvas: React.FC<ThreeDimensionalCanvasProps> = ({
     customGridColors,
     theme,
     colorPalette,
-    cubeChunkPattern
+    cubeChunkPattern,
+    faceColors
   ]);
 
   // Initialize circles for all cubes based on blockCount
@@ -503,7 +559,7 @@ const ThreeDimensionalCanvas: React.FC<ThreeDimensionalCanvasProps> = ({
             enablePan={false}
             minDistance={5}
             maxDistance={20}
-            autoRotate={settings.autoRotateCamera}
+            autoRotate={settings.autoRotateCamera && !isEditMode}
             autoRotateSpeed={0.5}
             enableDamping={true}
             dampingFactor={0.05}
@@ -532,7 +588,10 @@ const ThreeDimensionalCanvas: React.FC<ThreeDimensionalCanvasProps> = ({
                 onAnimationComplete={handleAnimationComplete}
                 onSceneReady={index === 0 ? handleSceneReady : undefined}
                 index={index}
-                disableHover={blockCount > 1} // Disable hover when multiple blocks
+                disableHover={blockCount > 1 || isEditMode} // Disable hover when multiple blocks or in edit mode
+                isEditMode={isEditMode}
+                onFaceClick={handleFaceClick}
+                selectedFragment={selectedFragment}
               />
             );
           })}

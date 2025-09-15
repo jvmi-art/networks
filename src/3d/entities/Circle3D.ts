@@ -23,6 +23,11 @@ export class Circle3D {
   enterStartTime: number = 0;
   enterDelay: number = 0;
   enterDuration: number = 1000; // Duration of color fade-in animation
+  
+  // Grid position info for mapping
+  face?: number;
+  row?: number;
+  col?: number;
 
   constructor(x: number, y: number, z: number, size: number, color: string, enabled: boolean = true) {
     this.position = new THREE.Vector3(x, y, z);
@@ -89,6 +94,15 @@ export class Circle3D {
     if (this.isEnabled) {
       this.targetColor = new THREE.Color(color);
       this.originalColor = new THREE.Color(color);
+    }
+  }
+
+  setColor(color: string) {
+    // Immediately update the color regardless of enabled state
+    this.originalColor = new THREE.Color(color);
+    if (this.isEnabled) {
+      this.targetColor = new THREE.Color(color);
+      this.currentColor = new THREE.Color(color);
     }
   }
 

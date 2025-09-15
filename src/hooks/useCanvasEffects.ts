@@ -270,12 +270,23 @@ export function useGridRegeneration({
       colorPalette: settings.colorPalette
     }),
     p5Instance,
-    isEditMode,
-    editColor,
-    onCircleClick,
+    // Remove isEditMode, editColor, and onCircleClick from dependencies
+    // to prevent grid regeneration when only edit mode changes
     // Don't include setupGrid, setters and refs as they cause issues
     // eslint-disable-next-line react-hooks/exhaustive-deps
   ]);
+
+  // Update interaction handler when edit mode changes without regenerating grid
+  useEffect(() => {
+    if (interactionHandlerRef.current && circles.length > 0) {
+      // Update the interaction handler's edit mode settings
+      interactionHandlerRef.current.updateReferences(circles, {
+        isEditMode,
+        editColor,
+        onCircleClick
+      });
+    }
+  }, [isEditMode, editColor, onCircleClick, circles]);
 
   // Update grid when customGridColors prop changes
   useEffect(() => {

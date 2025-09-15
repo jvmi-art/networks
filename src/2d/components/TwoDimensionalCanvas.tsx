@@ -35,6 +35,7 @@ interface TwoDimensionalCanvasProps {
   editColor?: string;
   colorPalette?: string[];
   hideControls?: boolean;
+  onImageUpload?: (colorGrid: string[][]) => void;
 }
 
 /**
@@ -46,7 +47,8 @@ const TwoDimensionalCanvas: React.FC<TwoDimensionalCanvasProps> = ({
   onCircleClick,
   editColor,
   colorPalette,
-  hideControls = false
+  hideControls = false,
+  onImageUpload
 }) => {
   const { theme } = useTheme();
   const { settings, updateSettings } = useCanvasSettings();
@@ -120,6 +122,24 @@ const TwoDimensionalCanvas: React.FC<TwoDimensionalCanvasProps> = ({
     // Reset the color index grid so we can rebuild it with the new colors
     colorGridRef.current = {};
 
+    // Convert pixel grid to 2D array for parent component
+    const gridWidth = settings.gridWidth || settings.gridSize;
+    const gridHeight = settings.gridHeight || settings.gridSize;
+    const colorArray: string[][] = [];
+    for (let row = 0; row < gridHeight; row++) {
+      const gridRow: string[] = [];
+      for (let col = 0; col < gridWidth; col++) {
+        const key = `${row}-${col}`;
+        gridRow.push(colorGrid[key] || '#000000');
+      }
+      colorArray.push(gridRow);
+    }
+
+    // Notify parent component about the uploaded image colors
+    if (onImageUpload) {
+      onImageUpload(colorArray);
+    }
+
     // Stop processing
     setIsProcessingImage(false);
 
@@ -162,7 +182,25 @@ const TwoDimensionalCanvas: React.FC<TwoDimensionalCanvasProps> = ({
 
         // Import the image processor functions
         import('../../utils/imageProcessor').then(({ processImageFromCanvas }) => {
-          const colorGrid = processImageFromCanvas(ctx, img, settings.gridSize, settings.gridSize);
+          const gridWidth = settings.gridWidth || settings.gridSize;
+          const gridHeight = settings.gridHeight || settings.gridSize;
+          const colorGrid = processImageFromCanvas(ctx, img, gridWidth, gridHeight);
+          
+          // Convert to 2D array and notify parent
+          const colorArray: string[][] = [];
+          for (let row = 0; row < gridHeight; row++) {
+            const gridRow: string[] = [];
+            for (let col = 0; col < gridWidth; col++) {
+              const key = `${row}-${col}`;
+              gridRow.push(colorGrid[key] || '#000000');
+            }
+            colorArray.push(gridRow);
+          }
+          
+          if (onImageUpload) {
+            onImageUpload(colorArray);
+          }
+          
           handlePixelDataReady(colorGrid);
         }).catch(err => {
           console.error('Error importing image processor:', err);
@@ -405,6 +443,8 @@ const TwoDimensionalCanvas: React.FC<TwoDimensionalCanvasProps> = ({
       if (isEditMode) {
         // Just update spring physics, no hover effects
         circle.applySpringPhysics();
+        // Reset hover state to prevent size changes
+        circle.targetSize = circle.originalSize;
 
         // Add subtle hover effect for edit mode
         const d = p5.dist(p5.mouseX, p5.mouseY, circle.x, circle.y);
@@ -462,7 +502,7 @@ const TwoDimensionalCanvas: React.FC<TwoDimensionalCanvasProps> = ({
       p5.blendMode(p5.BLEND);
     }
 
-    // Draw edit mode cursor preview
+    // Draw edit mode cursor preview and hover preview
     if (
       isEditMode &&
       editColor &&
@@ -471,6 +511,19 @@ const TwoDimensionalCanvas: React.FC<TwoDimensionalCanvasProps> = ({
       p5.mouseY >= 0 &&
       p5.mouseY <= p5.height
     ) {
+      // Show preview of the color on hover
+      circles.forEach((circle) => {
+        const d = p5.dist(p5.mouseX, p5.mouseY, circle.x, circle.y);
+        if (d < circle.size / 2) {
+          // Draw preview color over the circle
+          p5.push();
+          p5.noStroke();
+          p5.fill(editColor);
+          p5.circle(circle.x, circle.y, circle.size);
+          p5.pop();
+        }
+      });
+      
       p5.push();
 
       // Subtle cursor indicator
