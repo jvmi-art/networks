@@ -8,6 +8,7 @@ import { generateRandomPalette } from '../utils/paletteUtils';
 import { CanvasSettingsProvider } from '../contexts/CanvasSettingsContext';
 import { FragmentProvider } from '../contexts/FragmentContext';
 import { Header } from './home/components/Header';
+import { Footer } from './home/components/Footer';
 
 function HomePage() {
   const [customGridColors, setCustomGridColors] = useState<string[][]>([]);
@@ -70,6 +71,11 @@ function HomePage() {
             customGridColors={customGridColors}
             hideControls={true}
             useRandomColors={false}
+          />
+          <Footer 
+            xUrl='https://x.com/yourhandle'
+            instagramUrl='https://instagram.com/yourhandle'
+            githubUrl='https://github.com/yourhandle'
           />
         </div>
       </FragmentProvider>
