@@ -1,22 +1,19 @@
 /** @format */
 
 import './App.css';
-import { BrowserRouter } from 'react-router-dom';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { ThemeProvider } from './theme/theme-provider';
-import { CanvasSettingsProvider } from './contexts/CanvasSettingsContext';
-import { FragmentProvider } from './contexts/FragmentContext';
-import { NODE_MODE_CONFIG } from './constants';
-import CanvasVisualization from './components/CanvasVisualization';
+import HomePage from './pages/HomePage';
+import SandboxPage from './pages/SandboxPage';
 
 function App() {
   return (
     <BrowserRouter>
       <ThemeProvider defaultTheme='dark' storageKey='vite-ui-theme'>
-        <CanvasSettingsProvider initialSettings={NODE_MODE_CONFIG}>
-          <FragmentProvider>
-            <CanvasVisualization />
-          </FragmentProvider>
-        </CanvasSettingsProvider>
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/sandbox" element={<SandboxPage />} />
+        </Routes>
       </ThemeProvider>
     </BrowserRouter>
   );

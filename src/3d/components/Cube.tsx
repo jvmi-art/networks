@@ -47,33 +47,40 @@ export function Cube({
   const hasCalledReady = useRef(false);
   const groupRef = useRef<THREE.Group>(null);
   const rotationTime = useRef(0);
-  const [isDragging, setIsDragging] = useState(false);
+  const [isRotationPaused, setIsRotationPaused] = useState(false);
+  const pauseTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
-  // Mouse event handlers to track dragging state
+  // Handle cube click to pause rotation
+  const handleCubeClick = (event: THREE.Event) => {
+    event.stopPropagation();
+    
+    // Only handle if not in edit mode
+    if (isEditMode) return;
+    
+    // Clear any existing timeout
+    if (pauseTimeoutRef.current) {
+      clearTimeout(pauseTimeoutRef.current);
+    }
+    
+    // Toggle rotation pause
+    setIsRotationPaused(prev => !prev);
+    
+    // If we just paused, resume rotation after 3 seconds
+    if (!isRotationPaused) {
+      pauseTimeoutRef.current = setTimeout(() => {
+        setIsRotationPaused(false);
+      }, 3000);
+    }
+  };
+  
+  // Cleanup timeout on unmount
   React.useEffect(() => {
-    const handleMouseDown = () => {
-      if (orbitControlsRef.current) {
-        setIsDragging(true);
+    return () => {
+      if (pauseTimeoutRef.current) {
+        clearTimeout(pauseTimeoutRef.current);
       }
     };
-    
-    const handleMouseUp = () => {
-      setIsDragging(false);
-    };
-    
-    // Add event listeners
-    window.addEventListener('mousedown', handleMouseDown);
-    window.addEventListener('mouseup', handleMouseUp);
-    window.addEventListener('touchstart', handleMouseDown);
-    window.addEventListener('touchend', handleMouseUp);
-    
-    return () => {
-      window.removeEventListener('mousedown', handleMouseDown);
-      window.removeEventListener('mouseup', handleMouseUp);
-      window.removeEventListener('touchstart', handleMouseDown);
-      window.removeEventListener('touchend', handleMouseUp);
-    };
-  }, [orbitControlsRef]);
+  }, []);
   
   // Auto-rotation and onSceneReady
   useFrame((_, delta) => {
@@ -83,8 +90,8 @@ export function Cube({
       onSceneReady();
     }
     
-    // Diagonal rotation that shows all 6 faces (pause when dragging or in edit mode)
-    if (groupRef.current && !isDragging && !isEditMode) {
+    // Diagonal rotation that shows all 6 faces (pause when clicked or in edit mode)
+    if (groupRef.current && !isRotationPaused && !isEditMode) {
       rotationTime.current += delta;
       
       // Use different rotation axes for each cube for variety
@@ -120,7 +127,9 @@ export function Cube({
       {!disableHover && index === 0 && (
         <MouseTracker onMouseMove={setMouseRay} />
       )}
-      <RoundedCubeFaces theme={theme} />
+      <group onClick={handleCubeClick}>
+        <RoundedCubeFaces theme={theme} />
+      </group>
       <InteractiveCubeFaces 
         isEditMode={isEditMode}
         onFaceClick={onFaceClick}

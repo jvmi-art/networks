@@ -95,7 +95,11 @@ export function RoundedCubeFaces({ theme }: RoundedCubeFacesProps) {
 
   return (
     <group ref={groupRef}>
-      <mesh geometry={roundedCubeGeometry} material={material} />
+      <mesh 
+        geometry={roundedCubeGeometry} 
+        material={material}
+        raycast={THREE.Mesh.prototype.raycast}
+      />
     </group>
   );
 }
