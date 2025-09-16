@@ -51,8 +51,10 @@ export function Cube({
   const pauseTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   // Handle cube click to pause rotation
-  const handleCubeClick = (event: THREE.Event) => {
-    event.stopPropagation();
+  const handleCubeClick = (event: any) => {
+    if (event?.stopPropagation) {
+      event.stopPropagation();
+    }
     
     // Only handle if not in edit mode
     if (isEditMode) return;

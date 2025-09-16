@@ -1,6 +1,4 @@
 /** @format */
-
-import React from 'react';
 import { ChevronLeft, ChevronRight, ChevronUp, ChevronDown, RotateCw, Home } from 'lucide-react';
 import { useTheme } from '../../theme/theme-provider';
 

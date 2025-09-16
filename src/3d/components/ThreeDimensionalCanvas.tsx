@@ -73,8 +73,6 @@ const ThreeDimensionalCanvas: React.FC<ThreeDimensionalCanvasProps> = ({
     }));
     
     // Update the circles on this face with fragment colors
-    const gridWidth = settings.gridWidth || settings.gridSize;
-    const gridHeight = settings.gridHeight || settings.gridSize;
     
     // For each cube, update the circles on the clicked face
     setCubeCircles(prevCubeCircles => {
